@@ -15,7 +15,6 @@ import type * as lib_constants from "../lib/constants.js";
 import type * as matches from "../matches.js";
 import type * as model_authz from "../model/authz.js";
 import type * as teams from "../teams.js";
-import type * as tests_setup from "../tests/setup.js";
 import type * as users from "../users.js";
 
 import type {
@@ -32,7 +31,6 @@ declare const fullApi: ApiFromModules<{
   matches: typeof matches;
   "model/authz": typeof model_authz;
   teams: typeof teams;
-  "tests/setup": typeof tests_setup;
   users: typeof users;
 }>;
 

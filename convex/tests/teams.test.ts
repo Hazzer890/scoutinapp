@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { setupTest } from "./setup";
+import { setupTest } from "./setup.helpers";
 import { api } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { bootstrapRole } from "../auth";
@@ -79,6 +79,18 @@ describe("mutation role enforcement", () => {
 
     expect(await asAdmin.mutation(api.matches.remove, { matchId })).toBeNull();
     expect(await asAdmin.mutation(api.teams.remove, { teamId })).toBeNull();
+  });
+});
+
+describe("read functions require sign-in", () => {
+  test("teams.list, teams.get, matches.list reject unauthenticated callers", async () => {
+    const t = setupTest();
+    const eventId = await createEvent(t);
+    const teamId = await createTeam(t, eventId, 100);
+
+    await expect(t.query(api.teams.list, {})).rejects.toThrow("Not signed in");
+    await expect(t.query(api.teams.get, { teamId })).rejects.toThrow("Not signed in");
+    await expect(t.query(api.matches.list, {})).rejects.toThrow("Not signed in");
   });
 });
 

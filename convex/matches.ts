@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { getActiveEvent } from "./events";
-import { requireAdmin } from "./model/authz";
+import { requireAdmin, requireUser } from "./model/authz";
 import { mutation, query } from "./_generated/server";
 
 export const matchValidator = v.object({
@@ -18,6 +18,7 @@ export const list = query({
   args: {},
   returns: v.array(matchValidator),
   handler: async (ctx) => {
+    await requireUser(ctx);
     const event = await getActiveEvent(ctx);
     if (!event) return [];
     return await ctx.db

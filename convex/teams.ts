@@ -21,6 +21,7 @@ export const list = query({
   args: {},
   returns: v.array(teamValidator),
   handler: async (ctx) => {
+    await requireUser(ctx);
     const event = await getActiveEvent(ctx);
     if (!event) return [];
     return await ctx.db
@@ -97,7 +98,10 @@ export const listWithStatus = query({
 export const get = query({
   args: { teamId: v.id("teams") },
   returns: v.union(teamValidator, v.null()),
-  handler: async (ctx, { teamId }) => await ctx.db.get(teamId),
+  handler: async (ctx, { teamId }) => {
+    await requireUser(ctx);
+    return await ctx.db.get(teamId);
+  },
 });
 
 export const upsertManual = mutation({

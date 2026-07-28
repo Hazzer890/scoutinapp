@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { setupTest } from "./setup";
+import { setupTest } from "./setup.helpers";
 import { bootstrapRole } from "../auth";
 import { requireAdmin } from "../model/authz";
 
