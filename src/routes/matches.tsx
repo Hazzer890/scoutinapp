@@ -42,13 +42,19 @@ function ManualEntry() {
             </SelectContent>
           </Select>
         </div>
-        <Button
-          nativeButton={false}
-          disabled={teamNumber == null}
-          render={<Link to={`/matches/${matchNumber}/${teamNumber ?? ''}`} />}
-        >
-          Go
-        </Button>
+        {teamNumber == null ? (
+          <Button type="button" disabled className="h-11">
+            Go
+          </Button>
+        ) : (
+          <Button
+            nativeButton={false}
+            className="h-11"
+            render={<Link to={`/matches/${matchNumber}/${teamNumber}`} />}
+          >
+            Go
+          </Button>
+        )}
       </div>
     </div>
   )
@@ -93,7 +99,7 @@ function MatchCard({
               key={`red-${team}`}
               nativeButton={false}
               variant="outline"
-              className="border-red-600/40 text-red-600 hover:bg-red-600/10 dark:text-red-400"
+              className="h-11 border-red-600/40 text-red-600 hover:bg-red-600/10 dark:text-red-400"
               render={<Link to={`/matches/${match.matchNumber}/${team}`} state={{ matchId: match._id }} />}
             >
               {team}
@@ -104,7 +110,7 @@ function MatchCard({
               key={`blue-${team}`}
               nativeButton={false}
               variant="outline"
-              className="border-blue-600/40 text-blue-600 hover:bg-blue-600/10 dark:text-blue-400"
+              className="h-11 border-blue-600/40 text-blue-600 hover:bg-blue-600/10 dark:text-blue-400"
               render={<Link to={`/matches/${match.matchNumber}/${team}`} state={{ matchId: match._id }} />}
             >
               {team}

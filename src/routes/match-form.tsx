@@ -63,7 +63,7 @@ function TagChip({
       type="button"
       variant={selected ? 'default' : 'outline'}
       size="sm"
-      className="rounded-full"
+      className="h-11 rounded-full"
       onClick={onToggle}
     >
       {label}
@@ -203,7 +203,7 @@ function MatchForm({
       </div>
 
       <div className="fixed inset-x-0 bottom-0 border-t bg-background p-4">
-        <Button className="w-full" size="lg" disabled={submitting} onClick={handleSubmit}>
+        <Button className="h-12 w-full" size="lg" disabled={submitting} onClick={handleSubmit}>
           Submit
         </Button>
       </div>
@@ -220,7 +220,11 @@ function MatchFormContainer() {
   const matchNumber = Number(matchNumberParam)
   const teamNumber = Number(teamNumberParam)
 
-  if (!Number.isFinite(matchNumber) || !Number.isFinite(teamNumber)) {
+  if (
+    !Number.isInteger(matchNumber) ||
+    matchNumber <= 0 ||
+    !Number.isFinite(teamNumber)
+  ) {
     return (
       <div className="space-y-2">
         <p className="text-muted-foreground">Invalid match or team number.</p>

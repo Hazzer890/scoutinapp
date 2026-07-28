@@ -18,3 +18,11 @@ No other files touched (router.tsx, other routes, convex/ untouched). Reused the
 ## Concerns
 - Did not run a live Playwright 375px flow: this worktree has no `.env.local` / `VITE_CONVEX_URL`, and per the assignment I must never run the Convex CLI to stand one up. `ConvexReactClient` throws at construction without a real deployment URL, so the app can't render end-to-end here. The concrete verification bar given in the assignment (typecheck/build/lint) passes cleanly; a real browser smoke test should be done wherever a live Convex dev deployment is reachable (e.g. after merge).
 - `matches.list`'s sort-by-`matchNumber` guarantee relies on the `by_event_match` Convex index (`["eventId", "matchNumber"]`) rather than an explicit sort in the query handler — confirmed in `convex/schema.ts` and `convex/matches.ts`, not something this task's files control.
+
+## Review fixes (round 2)
+
+1. **Medium — tap targets under 44px.** Added `h-11` (44px) to the Go button, the six team buttons, and the tag chips; `h-12` on the sticky Submit. Files: `src/routes/matches.tsx`, `src/routes/match-form.tsx`.
+2. **Low — disabled Go looked enabled / bad href when no team picked.** `matches.tsx`: when no team is selected, render a plain `disabled` `Button` (no `render`/`Link`); only wire the `Link` once a team is chosen, so there's no `/matches/1/` href and no reliance on `disabled:` variants that Base UI non-native buttons skip.
+3. **Low — invalid match-number guard.** `match-form.tsx`: the invalid-param branch now also requires `Number.isInteger(matchNumber) && matchNumber > 0`, in addition to the existing `teamNumber` finiteness check.
+
+Re-ran `bun run typecheck && bun run build && bun run lint` — all clean, same 2 pre-existing UI warnings only.
