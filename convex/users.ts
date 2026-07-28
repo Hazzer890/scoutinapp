@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./model/authz";
 
@@ -57,12 +57,12 @@ export const setRole = mutation({
   handler: async (ctx, { userId, role }) => {
     await requireAdmin(ctx);
     const target = await ctx.db.get(userId);
-    if (!target) throw new Error("User not found");
+    if (!target) throw new ConvexError("User not found");
 
     if (target.role === "admin" && role !== "admin") {
       const admins = await ctx.db.query("users").collect();
       const adminCount = admins.filter((u) => u.role === "admin").length;
-      if (adminCount <= 1) throw new Error("Cannot demote the last admin");
+      if (adminCount <= 1) throw new ConvexError("Cannot demote the last admin");
     }
 
     await ctx.db.patch(userId, { role });

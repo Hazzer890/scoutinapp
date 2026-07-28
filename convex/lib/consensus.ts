@@ -28,19 +28,27 @@ export function mergeLists(lists: Entry[][], allTeamIds: Id<"teams">[]): Consens
 
   for (const list of lists) {
     const validEntries = list.filter((entry) => validTeamIds.has(entry.teamId));
-    const countInTier = new Map<Tier, number>();
+    const byTier = new Map<Tier, Entry[]>();
     for (const entry of validEntries) {
-      countInTier.set(entry.tier, (countInTier.get(entry.tier) ?? 0) + 1);
+      const group = byTier.get(entry.tier);
+      if (group) group.push(entry);
+      else byTier.set(entry.tier, [entry]);
     }
-    for (const entry of validEntries) {
-      const count = countInTier.get(entry.tier)!;
-      const score = TIER_VALUES[entry.tier] + 0.5 * (1 - entry.rank / count);
-      const scores = scoresByTeam.get(entry.teamId);
-      if (scores) scores.push(score);
-      else scoresByTeam.set(entry.teamId, [score]);
-      if (entry.tier === "DNP") {
-        dnpCountByTeam.set(entry.teamId, (dnpCountByTeam.get(entry.teamId) ?? 0) + 1);
-      }
+    for (const [tier, entries] of byTier) {
+      // Score by position within this list's valid entries, not the stored
+      // rank — a stale (deleted-team) entry ahead of a live one would
+      // otherwise shrink or negate the live entry's position bonus.
+      entries.sort((a, b) => a.rank - b.rank);
+      const count = entries.length;
+      entries.forEach((entry, position) => {
+        const score = TIER_VALUES[tier] + 0.5 * (1 - position / count);
+        const scores = scoresByTeam.get(entry.teamId);
+        if (scores) scores.push(score);
+        else scoresByTeam.set(entry.teamId, [score]);
+        if (tier === "DNP") {
+          dnpCountByTeam.set(entry.teamId, (dnpCountByTeam.get(entry.teamId) ?? 0) + 1);
+        }
+      });
     }
   }
 

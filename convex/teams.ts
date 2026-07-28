@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { getActiveEvent } from "./events";
 import { tierValidator } from "./lib/constants";
 import { requireAdmin, requireUser } from "./model/authz";
@@ -121,7 +121,7 @@ export const upsertManual = mutation({
       return teamId;
     }
     const event = await getActiveEvent(ctx);
-    if (!event) throw new Error("No active event");
+    if (!event) throw new ConvexError("No active event");
     return await ctx.db.insert("teams", { eventId: event._id, ...fields });
   },
 });

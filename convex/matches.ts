@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { getActiveEvent } from "./events";
 import { requireAdmin, requireUser } from "./model/authz";
 import { mutation, query } from "./_generated/server";
@@ -44,7 +44,7 @@ export const upsertManual = mutation({
       return matchId;
     }
     const event = await getActiveEvent(ctx);
-    if (!event) throw new Error("No active event");
+    if (!event) throw new ConvexError("No active event");
     return await ctx.db.insert("matches", { eventId: event._id, ...fields });
   },
 });

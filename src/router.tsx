@@ -10,11 +10,13 @@ import { MatchesPage } from '@/routes/matches'
 import { MatchFormPage } from '@/routes/match-form'
 import { PicklistPage } from '@/routes/picklist'
 import { AdminPage } from '@/routes/admin'
+import { ErrorPage } from '@/routes/error'
 
 export const router = createBrowserRouter([
   {
     path: '/',
     Component: RootLayout,
+    errorElement: <ErrorPage />,
     children: [
       { index: true, Component: HomePage },
       { path: 'sign-in', Component: SignInPage },

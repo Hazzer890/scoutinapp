@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
+import { ConvexError } from 'convex/values'
 import { toast } from 'sonner'
 import type { FunctionReturnType } from 'convex/server'
 import { api } from '../../../convex/_generated/api'
@@ -118,7 +119,9 @@ function MatchDialog({
       toast.success(match ? 'Match updated' : 'Match added')
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not save match')
+      toast.error(
+        err instanceof ConvexError ? String(err.data) : err instanceof Error ? err.message : 'Could not save match',
+      )
     } finally {
       setSaving(false)
     }
@@ -186,7 +189,9 @@ function DeleteMatchDialog({
       toast.success('Match deleted')
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not delete match')
+      toast.error(
+        err instanceof ConvexError ? String(err.data) : err instanceof Error ? err.message : 'Could not delete match',
+      )
     } finally {
       setDeleting(false)
     }

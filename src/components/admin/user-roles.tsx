@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from 'convex/react'
+import { ConvexError } from 'convex/values'
 import { toast } from 'sonner'
 import { api } from '../../../convex/_generated/api'
 import type { Id } from '../../../convex/_generated/dataModel'
@@ -13,7 +14,9 @@ export function UserRoles() {
     try {
       await setRole({ userId, role })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not update role')
+      toast.error(
+        err instanceof ConvexError ? String(err.data) : err instanceof Error ? err.message : 'Could not update role',
+      )
     }
   }
 

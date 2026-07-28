@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { mutation, query } from "./_generated/server";
@@ -125,7 +125,7 @@ export const moveEntry = mutation({
     }
 
     const event = await getActiveEvent(ctx);
-    if (!event) throw new Error("No active event");
+    if (!event) throw new ConvexError("No active event");
 
     const list = await findList(ctx, event._id, ownerId);
     const existing = list?.entries ?? [];
@@ -138,7 +138,7 @@ export const moveEntry = mutation({
     if (tier !== null) {
       const target = groups.get(tier)!;
       if (tier === "S" && target.length >= S_TIER_MAX) {
-        throw new Error("S tier is full");
+        throw new ConvexError("S tier is full");
       }
       const clampedRank = Math.max(0, Math.min(rank, target.length));
       target.splice(clampedRank, 0, { teamId, tier, rank: clampedRank });
@@ -185,7 +185,7 @@ export const applyMerge = mutation({
   handler: async (ctx) => {
     await requireAdmin(ctx);
     const inputs = await mergeInputsForActiveEvent(ctx);
-    if (!inputs) throw new Error("No active event");
+    if (!inputs) throw new ConvexError("No active event");
 
     const merged = mergeLists(inputs.entryLists, inputs.allTeamIds);
     const rankByTier = new Map<Tier, number>();

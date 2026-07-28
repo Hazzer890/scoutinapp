@@ -1,4 +1,5 @@
 import { Authenticated, AuthLoading, Unauthenticated, useMutation, useQuery } from 'convex/react'
+import { ConvexError } from 'convex/values'
 import { GitMergeIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router'
@@ -45,8 +46,11 @@ function Picklist() {
     try {
       await moveEntry({ scope: view === 'primary' ? 'primary' : 'mine', teamId, tier, rank })
     } catch (error) {
-      const message = error instanceof Error ? error.message : ''
-      toast.error(message.includes('S tier is full') ? 'S tier is full' : 'Could not move that team')
+      toast.error(
+        error instanceof ConvexError && error.data === 'S tier is full'
+          ? 'S tier is full'
+          : 'Could not move that team',
+      )
     }
   }
 

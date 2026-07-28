@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUser } from "./model/authz";
 
@@ -50,7 +50,7 @@ export const submit = mutation({
   handler: async (ctx, { teamId, ...fields }) => {
     const user = await requireUser(ctx);
     const team = await ctx.db.get(teamId);
-    if (!team) throw new Error("Team not found");
+    if (!team) throw new ConvexError("Team not found");
 
     const existing = await ctx.db
       .query("pitReports")

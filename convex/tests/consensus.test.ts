@@ -76,6 +76,20 @@ describe("mergeLists", () => {
     expect(results[0].tier).toBe("B");
   });
 
+  test("a stale entry ranked ahead of a live entry doesn't shrink the live entry's position bonus", () => {
+    const deletedTeam = teamId("gone");
+    // Stored ranks: deletedTeam=0, T1=1. After filtering, T1 must score as
+    // position 0 (rank-0 bonus 0.5) of its own tier, not position 1.
+    const results = mergeLists(
+      [[entry(deletedTeam, "B", 0), entry(T1, "B", 1)]],
+      [T1], // deletedTeam is not a current team
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0].teamId).toBe(T1);
+    expect(results[0].score).toBeCloseTo(4.5); // B (4) + 0.5*(1 - 0/1)
+    expect(results[0].tier).toBe("B");
+  });
+
   test("stale entries for teams outside allTeamIds don't skew tier counts or scores", () => {
     const deletedTeam = teamId("gone");
     // Without filtering first, countInTier for B would be 2 and T1's bonus

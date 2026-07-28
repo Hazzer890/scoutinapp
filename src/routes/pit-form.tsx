@@ -301,6 +301,10 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
 export function PitFormPage() {
   const { teamId } = useParams<{ teamId: string }>()
 
+  if (!teamId) {
+    return <p className="text-muted-foreground">Team not found.</p>
+  }
+
   return (
     <>
       <AuthLoading>
