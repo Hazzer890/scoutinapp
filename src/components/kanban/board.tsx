@@ -71,7 +71,7 @@ function SortableTeamCard({
       ref={setNodeRef}
       style={{ transform: CSS.Translate.toString(transform), transition }}
       className={cn(!readOnly && 'cursor-grab active:cursor-grabbing')}
-      {...attributes}
+      {...(readOnly ? {} : attributes)}
       {...listeners}
     >
       <TeamCard team={team} stats={stats} dragging={isDragging} />
@@ -223,10 +223,11 @@ export function Board({
 
     if (from === to) {
       // Uncategorized is sorted by team number, so reordering inside it means nothing.
-      if (overIndex === -1 || to === UNCATEGORIZED) return
-      const oldIndex = target.findIndex((t) => t._id === teamId)
-      if (oldIndex === overIndex) return
-      onMove(teamId, to, overIndex)
+      if (to === UNCATEGORIZED) return
+      // Dropped on the column background rather than a card: send it to the end.
+      const rank = overIndex === -1 ? target.length - 1 : overIndex
+      if (rank === target.findIndex((t) => t._id === teamId)) return
+      onMove(teamId, to, rank)
       return
     }
 

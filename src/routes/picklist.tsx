@@ -106,7 +106,7 @@ function Picklist() {
         )}
       </div>
 
-      {teams === undefined || entries === undefined ? (
+      {teams === undefined || entries === undefined || (readOnly && scoutLists === undefined) ? (
         <p className="text-muted-foreground">Loading…</p>
       ) : teams.length === 0 ? (
         <p className="text-muted-foreground">

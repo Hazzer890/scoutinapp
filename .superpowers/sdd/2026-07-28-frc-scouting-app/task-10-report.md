@@ -82,3 +82,21 @@ pre-existing `only-export-components` warnings in `ui/button.tsx` and `ui/tabs.t
    overlay + column ring reads clearly; revisit only if the gap is explicitly wanted.
 4. **Uncategorized ordering is by team number and not persisted** (those teams have no entry).
    Dragging inside that column intentionally does nothing.
+
+## Review fixes (round 1)
+
+1. **MEDIUM — same-column background drop no-oped** (`board.tsx`). The `overIndex === -1` early
+   return conflated "dropped on the column background" with the Uncategorized case. Now only
+   Uncategorized returns early; a background drop in a tier column sends
+   `rank = target.length - 1` (the last index after the server removes the entry, so the card
+   lands at the end). The existing equality guard against the card's current index still
+   suppresses the redundant mutation when it was already last.
+2. **LOW — scouts tab flashed "No scout has started a pick list yet."** (`picklist.tsx`). `entries`
+   defaults to `[]` in that view, so the loading guard never fired. Added
+   `(readOnly && scoutLists === undefined)` to the loading condition.
+3. **LOW — read-only cards announced as draggable** (`board.tsx`). `useSortable`'s `attributes`
+   (role=button, "press space to pick up" description) were spread even when disabled. The spread
+   is now gated on `!readOnly`; `listeners` are already `undefined` when disabled.
+
+`bun run typecheck && bun run build && bun run lint` re-run clean — same two pre-existing
+`only-export-components` warnings, nothing new.
