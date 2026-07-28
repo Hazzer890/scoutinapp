@@ -20,6 +20,7 @@ import type * as matches from "../matches.js";
 import type * as model_authz from "../model/authz.js";
 import type * as picklists from "../picklists.js";
 import type * as pitReports from "../pitReports.js";
+import type * as seed from "../seed.js";
 import type * as stats from "../stats.js";
 import type * as tba from "../tba.js";
 import type * as tbaImport from "../tbaImport.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   "model/authz": typeof model_authz;
   picklists: typeof picklists;
   pitReports: typeof pitReports;
+  seed: typeof seed;
   stats: typeof stats;
   tba: typeof tba;
   tbaImport: typeof tbaImport;

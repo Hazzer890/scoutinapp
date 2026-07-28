@@ -12,7 +12,8 @@
     "test": "vitest run",
     "dev:backend": "convex dev",
     "dev:all": "concurrently -k -n convex,vite -c cyan,magenta \"convex dev\" \"vite\"",
-    "go": "bun install && bun run dev:all"
+    "go": "bun install && bun run dev:all",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@auth/core": "0.41.1",
@@ -38,6 +39,7 @@
   },
   "devDependencies": {
     "@edge-runtime/vm": "^5.0.0",
+    "@playwright/test": "^1.62.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.1.2",
     "@types/react": "^19.2.17",
