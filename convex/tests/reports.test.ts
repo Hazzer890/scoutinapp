@@ -40,11 +40,14 @@ describe("pitReports.submit", () => {
       teamId,
       canScoreBalls: true,
       canClimb: false,
+      storageCapacity: 3,
       driverRating: 2,
       defenseRating: 1,
       tags: ["Tippy"],
+      notes: "Slow but steady",
     });
 
+    // Second submit omits storageCapacity/notes entirely: they must not survive from the first.
     await t.withIdentity({ subject: secondScout }).mutation(api.pitReports.submit, {
       teamId,
       canScoreBalls: false,
@@ -64,12 +67,16 @@ describe("pitReports.submit", () => {
     expect(reports[0].scoutId).toBe(secondScout);
     expect(reports[0].driverRating).toBe(5);
     expect(reports[0].tags).toEqual(["Fast"]);
+    expect(reports[0].storageCapacity).toBeUndefined();
+    expect(reports[0].notes).toBeUndefined();
 
     const fetched = await t.withIdentity({ subject: firstScout }).query(api.pitReports.getForTeam, {
       teamId,
     });
     expect(fetched?.driverRating).toBe(5);
     expect(fetched?.photoUrl).toBeNull();
+    expect(fetched?.storageCapacity).toBeUndefined();
+    expect(fetched?.notes).toBeUndefined();
   });
 });
 

@@ -26,6 +26,7 @@ export const getForTeam = query({
     const report = await ctx.db
       .query("pitReports")
       .withIndex("by_team", (q) => q.eq("teamId", teamId))
+      .order("desc")
       .first();
     if (!report) return null;
     const photoUrl = report.photoId ? await ctx.storage.getUrl(report.photoId) : null;
@@ -54,10 +55,11 @@ export const submit = mutation({
     const existing = await ctx.db
       .query("pitReports")
       .withIndex("by_team", (q) => q.eq("teamId", teamId))
+      .order("desc")
       .first();
     const doc = { eventId: team.eventId, teamId, scoutId: user._id, ...fields };
     if (existing) {
-      await ctx.db.patch(existing._id, doc);
+      await ctx.db.replace(existing._id, doc);
     } else {
       await ctx.db.insert("pitReports", doc);
     }
