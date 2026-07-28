@@ -19,3 +19,15 @@ Complete.
 ## Concerns
 - Detail view was not visually verified in a live browser (no `.env.local` / running Convex dev deployment in this worktree, and the brief forbids running the Convex CLI here). Typecheck confirms all query return types line up with the UI's field access, but actual visual polish (spacing, badge contrast in dark mode) is unverified against a live app.
 - Tier colors (S/A/B/C/D/DNP) are a simple fixed palette I chose; no existing tier-badge convention existed elsewhere in the app to match against.
+
+## Fix round (review feedback)
+
+Two findings from review, both fixed:
+
+1. **HIGH** — `ScrollArea` in `team-detail.tsx` had `max-h` but its Base UI viewport is `height:100%`, which resolves to `auto` with no bounding parent height, so it never actually scrolled and overflow content was unreachable. Replaced with a plain `<div className="-mx-4 max-h-[60vh] overflow-y-auto px-4">` and dropped the now-unused `ScrollArea` import — native CSS overflow does the job, no component needed.
+2. **MEDIUM** — the modal only knew a team object or `null`, so it couldn't distinguish "teams still loading" from "id doesn't match any team," and `displayTeam` never cleared once set. Fixed by:
+   - Passing `loading={teamsLoading}` (`teams === undefined`) from `teams.tsx` into `TeamDetail`, which now renders "Loading…" while open and the list hasn't resolved yet.
+   - `TeamDetail` renders "Team not found." when not loading and `team` is `null`.
+   - The `displayTeam` effect now clears to `null` when `selectedTeamId` is set, teams have resolved, and no team matches — so navigating from a valid team to a bad/stale id shows "Team not found" instead of the previous team's data. Closing the modal (`selectedTeamId` becomes `null`) still leaves `displayTeam` alone so the close animation doesn't flash empty.
+
+Re-verified: `bun run typecheck && bun run build && bun run lint` all pass, same two pre-existing warnings in `src/components/ui`, no new ones.

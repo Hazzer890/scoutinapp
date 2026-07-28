@@ -15,14 +15,21 @@ function TeamsList() {
   const [search, setSearch] = useState('')
 
   const isAdmin = me?.role === 'admin'
+  const teamsLoading = teams === undefined
   const selectedTeamId = searchParams.get('team')
   const selectedTeam = teams?.find((t) => t._id === selectedTeamId) ?? null
 
-  // Keep showing the last team's data while the dialog/sheet closing animation plays.
+  // Keep showing the last team's data while the dialog/sheet closing animation plays,
+  // but drop it once we know the current id is stale/invalid so we don't show team A's
+  // data under team B's (bad) id.
   const [displayTeam, setDisplayTeam] = useState<TeamWithStatus | null>(null)
   useEffect(() => {
-    if (selectedTeam) setDisplayTeam(selectedTeam)
-  }, [selectedTeam])
+    if (selectedTeam) {
+      setDisplayTeam(selectedTeam)
+    } else if (selectedTeamId && !teamsLoading) {
+      setDisplayTeam(null)
+    }
+  }, [selectedTeam, selectedTeamId, teamsLoading])
 
   const filtered = useMemo(() => {
     if (!teams) return []
@@ -86,6 +93,7 @@ function TeamsList() {
 
       <TeamDetail
         team={displayTeam}
+        loading={teamsLoading}
         isAdmin={isAdmin}
         open={selectedTeamId !== null}
         onOpenChange={(open) => {

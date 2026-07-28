@@ -4,7 +4,6 @@ import type { FunctionReturnType } from 'convex/server'
 import { api } from '../../convex/_generated/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 
@@ -88,7 +87,7 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
         )}
       </div>
 
-      <ScrollArea className="-mx-4 max-h-[60vh] px-4">
+      <div className="-mx-4 max-h-[60vh] overflow-y-auto px-4">
         <div className="space-y-4 pb-2">
           <section className="space-y-2">
             <h3 className="text-sm font-medium">Match stats</h3>
@@ -195,7 +194,7 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
             )}
           </section>
         </div>
-      </ScrollArea>
+      </div>
     </>
   )
 }
@@ -211,17 +210,25 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export function TeamDetail({
   team,
+  loading,
   isAdmin,
   open,
   onOpenChange,
 }: {
   team: TeamWithStatus | null
+  loading: boolean
   isAdmin: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
   const isDesktop = useIsDesktop()
-  const body = team && <TeamDetailBody team={team} isAdmin={isAdmin} />
+  const body = loading ? (
+    <p className="text-sm text-muted-foreground">Loading…</p>
+  ) : team ? (
+    <TeamDetailBody team={team} isAdmin={isAdmin} />
+  ) : (
+    <p className="text-sm text-muted-foreground">Team not found.</p>
+  )
 
   if (isDesktop) {
     return (
