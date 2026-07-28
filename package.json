@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "typecheck": "tsc -b",
     "preview": "vite preview",
+    "test": "vitest run",
     "dev:backend": "convex dev",
     "dev:all": "concurrently -k -n convex,vite -c cyan,magenta \"convex dev\" \"vite\"",
     "go": "bun install && bun run dev:all"
@@ -33,15 +34,18 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@edge-runtime/vm": "^5.0.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.1.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "concurrently": "^10.0.4",
+    "convex-test": "^0.0.54",
     "oxlint": "^1.71.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
   }
 }
