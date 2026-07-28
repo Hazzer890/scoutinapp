@@ -4,6 +4,7 @@ export const TELEOP_SECONDS = 135;
 export const BENCHMARK_TEAM = 4788;
 
 export const TIERS = ["S", "A", "B", "C", "D", "DNP"] as const;
+export type Tier = (typeof TIERS)[number];
 export const tierValidator = v.union(...TIERS.map((tier) => v.literal(tier)));
 
 export const S_TIER_MAX = 2;

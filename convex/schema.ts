@@ -20,7 +20,9 @@ export default defineSchema({
     tbaKey: v.string(),
     name: v.string(),
     isActive: v.boolean(),
-  }),
+  })
+    .index("by_active", ["isActive"])
+    .index("by_tba_key", ["tbaKey"]),
   teams: defineTable({
     eventId: v.id("events"),
     tbaKey: v.optional(v.string()),
@@ -52,7 +54,9 @@ export default defineSchema({
     tags: v.array(v.string()),
     photoId: v.optional(v.id("_storage")),
     notes: v.optional(v.string()),
-  }).index("by_team", ["teamId"]),
+  })
+    .index("by_team", ["teamId"])
+    .index("by_event", ["eventId"]),
   matchReports: defineTable({
     eventId: v.id("events"),
     teamId: v.id("teams"),
