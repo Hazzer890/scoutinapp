@@ -117,8 +117,8 @@ function MatchDialog({
       })
       toast.success(match ? 'Match updated' : 'Match added')
       onOpenChange(false)
-    } catch {
-      toast.error('Could not save match')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save match')
     } finally {
       setSaving(false)
     }
@@ -150,6 +150,10 @@ function MatchDialog({
               value={scheduledTime}
               onChange={(e) => setScheduledTime(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              Clearing this field won&rsquo;t remove an existing scheduled time&mdash;set a new one to
+              change it.
+            </p>
           </div>
         </div>
         <DialogFooter>
@@ -181,8 +185,8 @@ function DeleteMatchDialog({
       await remove({ matchId: match._id })
       toast.success('Match deleted')
       onOpenChange(false)
-    } catch {
-      toast.error('Could not delete match')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not delete match')
     } finally {
       setDeleting(false)
     }

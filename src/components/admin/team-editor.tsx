@@ -59,14 +59,14 @@ function TeamDialog({
         teamId: team?._id,
         number: num,
         nickname: nickname.trim(),
-        city: city.trim() || undefined,
-        stateProv: stateProv.trim() || undefined,
-        country: country.trim() || undefined,
+        city: city.trim(),
+        stateProv: stateProv.trim(),
+        country: country.trim(),
       })
       toast.success(team ? 'Team updated' : 'Team added')
       onOpenChange(false)
-    } catch {
-      toast.error('Could not save team')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not save team')
     } finally {
       setSaving(false)
     }
@@ -136,8 +136,8 @@ function DeleteTeamDialog({
       await remove({ teamId: team._id })
       toast.success('Team deleted')
       onOpenChange(false)
-    } catch {
-      toast.error('Could not delete team')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not delete team')
     } finally {
       setDeleting(false)
     }
