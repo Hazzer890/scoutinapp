@@ -23,21 +23,27 @@ function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">{event?.name ?? 'No active event'}</h1>
-        {event === null && (
-          <p className="text-muted-foreground">
-            {me?.role === 'admin' ? (
-              <>
-                Set an active event in{' '}
-                <Link to="/admin" className="underline">
-                  Admin
-                </Link>
-                .
-              </>
-            ) : (
-              'Ask an admin to set an active event.'
+        {event === undefined ? (
+          <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+        ) : (
+          <>
+            <h1 className="text-2xl font-semibold">{event?.name ?? 'No active event'}</h1>
+            {event === null && (
+              <p className="text-muted-foreground">
+                {me?.role === 'admin' ? (
+                  <>
+                    Set an active event in{' '}
+                    <Link to="/admin" className="underline">
+                      Admin
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  'Ask an admin to set an active event.'
+                )}
+              </p>
             )}
-          </p>
+          </>
         )}
       </div>
 
