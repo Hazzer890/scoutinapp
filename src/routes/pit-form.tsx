@@ -24,6 +24,7 @@ function ToggleCard({
   return (
     <button
       type="button"
+      aria-pressed={checked}
       onClick={() => onChange(!checked)}
       className={cn(
         'flex h-14 w-full items-center justify-between rounded-lg border px-4 text-base font-medium transition-colors',
@@ -55,11 +56,12 @@ function RatingRow({
   return (
     <div className="space-y-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <div className="grid grid-cols-5 gap-2">
+      <div role="group" aria-label={label} className="grid grid-cols-5 gap-2">
         {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
           <button
             key={n}
             type="button"
+            aria-pressed={value === n}
             onClick={() => onChange(n)}
             className={cn(
               'h-12 rounded-lg border text-base font-semibold tabular-nums transition-colors',
@@ -97,9 +99,10 @@ function TagChips({ tags, onChange }: { tags: string[]; onChange: (tags: string[
           <button
             key={tag}
             type="button"
+            aria-pressed={tags.includes(tag)}
             onClick={() => toggle(tag)}
             className={cn(
-              'h-10 rounded-full border px-3.5 text-sm font-medium transition-colors',
+              'h-11 rounded-full border px-3.5 text-sm font-medium transition-colors',
               tags.includes(tag)
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-input bg-background hover:bg-muted',
@@ -178,7 +181,9 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
         headers: { 'Content-Type': file.type },
         body: file,
       })
-      const { storageId } = (await res.json()) as { storageId: Id<'_storage'> }
+      if (!res.ok) throw new Error('Upload failed')
+      const { storageId } = (await res.json()) as { storageId?: Id<'_storage'> }
+      if (!storageId) throw new Error('Upload failed')
       setPhotoId(storageId)
       setPhotoPreview(URL.createObjectURL(file))
     } catch {
@@ -263,7 +268,7 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
             type="file"
             accept="image/*"
             capture="environment"
-            className="hidden"
+            className="sr-only"
             disabled={uploading}
             onChange={handlePhotoChange}
           />
