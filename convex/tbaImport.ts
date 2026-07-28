@@ -47,14 +47,17 @@ export const applyImport = internalMutation({
     const eventId = await upsertActiveEvent(ctx, { tbaKey: eventKey, name: eventName });
 
     // Matched by tbaKey, not table index (teams/matches have no tbaKey index and
-    // event rosters are small). Rows with no tbaKey (manual teams) never match,
-    // so manual entries are left untouched.
+    // event rosters are small). A manual team (no tbaKey) with a matching
+    // `number` is adopted (gains a tbaKey) instead of leaving a duplicate;
+    // manual teams whose number isn't in this import are left untouched.
     const existingTeams = await ctx.db
       .query("teams")
       .withIndex("by_event_number", (q) => q.eq("eventId", eventId))
       .collect();
     for (const row of teams) {
-      const existing = existingTeams.find((t) => t.tbaKey === row.tbaKey);
+      const existing =
+        existingTeams.find((t) => t.tbaKey === row.tbaKey) ??
+        existingTeams.find((t) => t.tbaKey === undefined && t.number === row.number);
       if (existing) {
         await ctx.db.patch(existing._id, row);
       } else {

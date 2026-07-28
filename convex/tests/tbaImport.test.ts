@@ -157,6 +157,34 @@ describe("tbaImport.applyImport", () => {
     );
     expect(allTeams).toHaveLength(2);
   });
+
+  test("adopts a manual team when its number matches an incoming TBA team", async () => {
+    const t = setupTest();
+    const eventId: Id<"events"> = await t.run((ctx) =>
+      ctx.db.insert("events", { tbaKey: "2026test", name: "Test Event", isActive: true }),
+    );
+    const manualTeamId = await t.run((ctx) =>
+      ctx.db.insert("teams", { eventId, number: 100, nickname: "Manual Team 100" }),
+    );
+
+    await t.mutation(internal.tbaImport.applyImport, {
+      eventKey: "2026test",
+      eventName: "Test Event",
+      teams: [{ tbaKey: "frc100", number: 100, nickname: "Team 100" }],
+      matches: [],
+    });
+
+    const allTeams = await t.run((ctx) =>
+      ctx.db
+        .query("teams")
+        .withIndex("by_event_number", (q) => q.eq("eventId", eventId))
+        .collect(),
+    );
+    expect(allTeams).toHaveLength(1);
+    expect(allTeams[0]._id).toBe(manualTeamId);
+    expect(allTeams[0].tbaKey).toBe("frc100");
+    expect(allTeams[0].nickname).toBe("Team 100");
+  });
 });
 
 describe("tba.importEvent", () => {
@@ -186,6 +214,82 @@ describe("tba.importEvent", () => {
     });
 
     expect(result).toEqual({ ok: false, error: "Admin only" });
+    vi.unstubAllEnvs();
+  });
+
+  test("success path: fetches, maps, imports, and returns ok:true", async () => {
+    vi.stubEnv("TBA_API_KEY", "test-key");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.endsWith("/matches/simple")) {
+          return new Response(
+            JSON.stringify([
+              {
+                key: "2026test_qm1",
+                comp_level: "qm",
+                match_number: 1,
+                alliances: { red: { team_keys: ["frc100"] }, blue: { team_keys: ["frc200"] } },
+                time: 1700000000,
+              },
+              {
+                key: "2026test_sf1m1",
+                comp_level: "sf",
+                match_number: 1,
+                alliances: { red: { team_keys: ["frc100"] }, blue: { team_keys: ["frc200"] } },
+              },
+            ]),
+          );
+        }
+        if (url.endsWith("/teams/simple")) {
+          return new Response(
+            JSON.stringify([
+              { key: "frc100", team_number: 100, nickname: "Team 100" },
+              { key: "frc200", team_number: 200, nickname: "Team 200" },
+            ]),
+          );
+        }
+        return new Response(JSON.stringify({ name: "Test Event" }));
+      }),
+    );
+
+    const t = setupTest();
+    const adminId = await createUser(t, "admin");
+
+    const result = await t.withIdentity({ subject: adminId }).action(api.tba.importEvent, {
+      eventKey: "2026test",
+    });
+    expect(result).toEqual({ ok: true, teams: 2, matches: 1 });
+
+    const event = await t.run((ctx) =>
+      ctx.db
+        .query("events")
+        .withIndex("by_tba_key", (q) => q.eq("tbaKey", "2026test"))
+        .first(),
+    );
+    expect(event?.name).toBe("Test Event");
+    expect(event?.isActive).toBe(true);
+
+    const teams = await t.run((ctx) =>
+      ctx.db
+        .query("teams")
+        .withIndex("by_event_number", (q) => q.eq("eventId", event!._id))
+        .collect(),
+    );
+    expect(teams.map((team) => team.number).sort()).toEqual([100, 200]);
+
+    const matches = await t.run((ctx) =>
+      ctx.db
+        .query("matches")
+        .withIndex("by_event_match", (q) => q.eq("eventId", event!._id))
+        .collect(),
+    );
+    expect(matches).toHaveLength(1); // the sf match was filtered out
+    expect(matches[0].redTeams).toEqual([100]);
+    expect(matches[0].blueTeams).toEqual([200]);
+    expect(matches[0].scheduledTime).toBe(1700000000000);
+
+    vi.unstubAllGlobals();
     vi.unstubAllEnvs();
   });
 });
