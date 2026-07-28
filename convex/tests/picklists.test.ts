@@ -182,7 +182,6 @@ describe("picklists.applyMerge", () => {
     const eventId = await createEvent(t);
     const teamOld = await createTeam(t, eventId, 1);
     const teamNew = await createTeam(t, eventId, 2);
-    const filler = await createTeam(t, eventId, 3);
     const scoutId = await createUser(t, "scout");
     const adminId = await createUser(t, "admin");
     const asScout = t.withIdentity({ subject: scoutId });
@@ -195,28 +194,19 @@ describe("picklists.applyMerge", () => {
       }),
     );
 
-    // filler is the #1 pick in B (rank 0), scoring exactly the B/A tie
-    // boundary (4 + 0.5), which "round half up" promotes to A; teamNew at
-    // rank 1 scores 4.25 and stays in B. Two entries, deterministic result.
-    await asScout.mutation(api.picklists.moveEntry, {
-      scope: "mine",
-      teamId: filler,
-      tier: "B",
-      rank: 0,
-    });
+    // teamNew alone at rank 0 of B scores exactly the B/A tie boundary
+    // (4 + 0.5); "round half down" keeps ties in the lower tier, so it
+    // merges as B, not A.
     await asScout.mutation(api.picklists.moveEntry, {
       scope: "mine",
       teamId: teamNew,
       tier: "B",
-      rank: 1,
+      rank: 0,
     });
 
     await asAdmin.mutation(api.picklists.applyMerge, {});
 
     const primary = await asAdmin.query(api.picklists.getPrimary, {});
-    expect(primary.entries).toEqual([
-      { teamId: filler, tier: "A", rank: 0 },
-      { teamId: teamNew, tier: "B", rank: 0 },
-    ]);
+    expect(primary.entries).toEqual([{ teamId: teamNew, tier: "B", rank: 0 }]);
   });
 });

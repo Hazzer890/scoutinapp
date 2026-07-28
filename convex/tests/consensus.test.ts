@@ -66,4 +66,26 @@ describe("mergeLists", () => {
     const results = mergeLists([[entry(T1, "B", 0)]], [T1, T2]);
     expect(results.map((r) => r.teamId)).toEqual([T1]);
   });
+
+  test("unanimous #1-of-B stays B (round half down on the B/A tie boundary)", () => {
+    // Every list scores it 4 + 0.5*(1-0/1) = 4.5, exactly tied between B and A.
+    const results = mergeLists(
+      [[entry(T1, "B", 0)], [entry(T1, "B", 0)], [entry(T1, "B", 0)]],
+      [T1],
+    );
+    expect(results[0].tier).toBe("B");
+  });
+
+  test("stale entries for teams outside allTeamIds don't skew tier counts or scores", () => {
+    const deletedTeam = teamId("gone");
+    // Without filtering first, countInTier for B would be 2 and T1's bonus
+    // would be diluted even though the deleted team never scores.
+    const results = mergeLists(
+      [[entry(T1, "B", 0), entry(deletedTeam, "B", 1)]],
+      [T1], // deletedTeam is not a current team
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0].teamId).toBe(T1);
+    expect(results[0].score).toBeCloseTo(4.5); // count=1 (only T1), not 2
+  });
 });

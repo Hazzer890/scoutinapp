@@ -6,14 +6,14 @@ export type ConsensusResult = { teamId: Id<"teams">; score: number; tier: Tier; 
 
 const TIER_VALUES: Record<Tier, number> = { S: 6, A: 5, B: 4, C: 3, D: 2, DNP: 0 };
 
-// TIERS is ordered highest value first, so the first tier found at the
-// minimum distance is the higher one — matching "round half up" on ties.
+// TIERS is ordered highest value first, so the last tier found at the
+// minimum distance is the lower one — matching "round half down" on ties.
 function closestTier(score: number): Tier {
   let best: Tier = TIERS[0];
   let bestDist = Infinity;
   for (const tier of TIERS) {
     const dist = Math.abs(TIER_VALUES[tier] - score);
-    if (dist < bestDist) {
+    if (dist <= bestDist) {
       bestDist = dist;
       best = tier;
     }
@@ -27,12 +27,12 @@ export function mergeLists(lists: Entry[][], allTeamIds: Id<"teams">[]): Consens
   const dnpCountByTeam = new Map<Id<"teams">, number>();
 
   for (const list of lists) {
+    const validEntries = list.filter((entry) => validTeamIds.has(entry.teamId));
     const countInTier = new Map<Tier, number>();
-    for (const entry of list) {
+    for (const entry of validEntries) {
       countInTier.set(entry.tier, (countInTier.get(entry.tier) ?? 0) + 1);
     }
-    for (const entry of list) {
-      if (!validTeamIds.has(entry.teamId)) continue;
+    for (const entry of validEntries) {
       const count = countInTier.get(entry.tier)!;
       const score = TIER_VALUES[entry.tier] + 0.5 * (1 - entry.rank / count);
       const scores = scoresByTeam.get(entry.teamId);
