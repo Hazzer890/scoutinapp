@@ -6,8 +6,7 @@ import { Button } from '@/components/ui/button'
 
 const quickLinks = [
   { to: '/teams', label: 'Teams' },
-  { to: '/pit', label: 'Pit Scouting' },
-  { to: '/matches', label: 'Match Scouting' },
+  { to: '/scout', label: 'Scout Teams' },
   { to: '/picklist', label: 'Pick List' },
 ]
 
@@ -18,7 +17,6 @@ function Dashboard() {
 
   const totalTeams = teams?.length ?? 0
   const teamsScouted = teams?.filter((t) => t.pitScouted).length ?? 0
-  const totalMatchReports = teams?.reduce((sum, t) => sum + t.matchReportCount, 0) ?? 0
 
   return (
     <div className="space-y-6">
@@ -47,19 +45,11 @@ function Dashboard() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="rounded-lg border bg-card p-4 text-card-foreground">
-          <p className="text-sm text-muted-foreground">Teams scouted</p>
-          <p className="text-3xl font-semibold tabular-nums">
-            <CountUp to={teamsScouted} /> / {totalTeams}
-          </p>
-        </div>
-        <div className="rounded-lg border bg-card p-4 text-card-foreground">
-          <p className="text-sm text-muted-foreground">Match reports</p>
-          <p className="text-3xl font-semibold tabular-nums">
-            <CountUp to={totalMatchReports} />
-          </p>
-        </div>
+      <div className="rounded-lg border bg-card p-4 text-card-foreground">
+        <p className="text-sm text-muted-foreground">Teams scouted</p>
+        <p className="text-3xl font-semibold tabular-nums">
+          <CountUp to={teamsScouted} /> / {totalTeams}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">

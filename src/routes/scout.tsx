@@ -18,7 +18,7 @@ function TeamGrid() {
       {teams.map((team) => (
         <Link
           key={team._id}
-          to={`/pit/${team._id}`}
+          to={`/scout/${team._id}`}
           className="relative flex h-24 flex-col items-center justify-center gap-0.5 rounded-lg border bg-card text-card-foreground transition-colors hover:bg-muted"
         >
           {team.pitScouted && (
@@ -34,16 +34,16 @@ function TeamGrid() {
   )
 }
 
-export function PitPage() {
+export function ScoutPage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Pit Scouting</h1>
+      <h1 className="text-2xl font-semibold">Scout Teams</h1>
       <AuthLoading>
         <p className="text-muted-foreground">Loading…</p>
       </AuthLoading>
       <Unauthenticated>
         <p className="text-muted-foreground">
-          Sign in to view pit scouting.{' '}
+          Sign in to scout teams.{' '}
           <Link to="/sign-in" className="underline">
             Sign in
           </Link>

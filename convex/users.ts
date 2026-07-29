@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin } from "./model/authz";
 
 export const me = query({
@@ -48,6 +48,22 @@ export const list = query({
       email: u.email ?? null,
       role: u.role ?? null,
     }));
+  },
+});
+
+// Dev escape hatch: promote a user by email without needing a signed-in admin.
+// Run with: npx convex run users:setRoleByEmail '{"email":"...","role":"admin"}'
+export const setRoleByEmail = internalMutation({
+  args: { email: v.string(), role: roleValidator },
+  returns: v.null(),
+  handler: async (ctx, { email, role }) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", email))
+      .first();
+    if (!user) throw new ConvexError("User not found");
+    await ctx.db.patch(user._id, { role });
+    return null;
   },
 });
 

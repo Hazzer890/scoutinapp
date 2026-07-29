@@ -1,47 +1,23 @@
-import { useAuthActions } from '@convex-dev/auth/react'
-import { Authenticated, Unauthenticated } from 'convex/react'
-import { Link, Outlet, useNavigate } from 'react-router'
-import { AppNav } from '@/components/app-nav'
-import { Button } from '@/components/ui/button'
-import { ModeToggle } from '@/components/mode-toggle'
+import { Outlet } from 'react-router'
+import { Balatro } from '@/components/reactbits/balatro'
+import { CardNav } from '@/components/card-nav'
 
 export function RootLayout() {
-  const { signOut } = useAuthActions()
-  const navigate = useNavigate()
-
   return (
     <div className="min-h-svh bg-background text-foreground">
-      <header className="flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="font-semibold">
-            scoutinapp
-          </Link>
-          <AppNav />
-        </div>
-        <div className="flex items-center gap-2">
-          <Unauthenticated>
-            <Button
-              variant="outline"
-              size="sm"
-              nativeButton={false}
-              render={<Link to="/sign-in" />}
-            >
-              Sign in
-            </Button>
-          </Unauthenticated>
-          <Authenticated>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void signOut().then(() => navigate('/'))}
-            >
-              Sign out
-            </Button>
-          </Authenticated>
-          <ModeToggle />
-        </div>
-      </header>
-      <main className="p-4 sm:p-6">
+      <div className="fixed inset-0" aria-hidden>
+        <Balatro
+          isRotate={false}
+          mouseInteraction={false}
+          color1="#ec0080"
+          color2="#99003f"
+          color3="#0d0105"
+        />
+        {/* Mutes the shader so page content stays readable. */}
+        <div className="absolute inset-0 bg-background/80" />
+      </div>
+      <CardNav />
+      <main className="relative p-4 pt-24 sm:p-6 sm:pt-28">
         <Outlet />
       </main>
     </div>

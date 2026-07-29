@@ -46,10 +46,6 @@ export function PitStatusBadge({ scouted }: { scouted: boolean }) {
   )
 }
 
-function pct(value: number | null, digits = 0) {
-  return value === null ? '—' : `${(value * 100).toFixed(digits)}%`
-}
-
 // ponytail: matches the sm breakpoint used elsewhere; bump if the Tailwind config's screen changes.
 function useIsDesktop() {
   return useSyncExternalStore(
@@ -65,10 +61,8 @@ function useIsDesktop() {
 function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: boolean }) {
   const stats = useQuery(api.stats.forTeam, { teamId: team._id })
   const pitReport = useQuery(api.pitReports.getForTeam, { teamId: team._id })
-  const matchReports = useQuery(api.matchReports.listForTeam, { teamId: team._id })
 
   const location = [team.city, team.stateProv, team.country].filter(Boolean).join(', ')
-  const sortedMatches = matchReports ? [...matchReports].sort((a, b) => a.matchNumber - b.matchNumber) : undefined
 
   return (
     <>
@@ -90,26 +84,18 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
       <div className="-mx-4 max-h-[60vh] overflow-y-auto px-4">
         <div className="space-y-4 pb-2">
           <section className="space-y-2">
-            <h3 className="text-sm font-medium">Match stats</h3>
+            <h3 className="text-sm font-medium">Stats</h3>
             {stats === undefined ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : stats === null ? (
-              <p className="text-sm text-muted-foreground">No match reports yet.</p>
+              <p className="text-sm text-muted-foreground">No ball estimate yet.</p>
             ) : (
-              <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-                <Stat label="Matches" value={String(stats.matchCount)} />
-                <Stat label="Avg balls" value={stats.avgBalls.toFixed(1)} />
-                <Stat label="Accuracy" value={pct(stats.accuracy)} />
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <Stat label="Balls / match" value={String(stats.ballsPerMatch)} />
                 <Stat
-                  label={stats.throughputPctOfBenchmark === null ? 'Throughput' : '% of benchmark'}
-                  value={
-                    stats.throughputPctOfBenchmark === null
-                      ? `${stats.throughputBps.toFixed(2)} balls/s`
-                      : `${stats.throughputPctOfBenchmark.toFixed(0)}%`
-                  }
+                  label="% of benchmark"
+                  value={stats.pctOfBenchmark === null ? '—' : `${stats.pctOfBenchmark.toFixed(0)}%`}
                 />
-                <Stat label="Avg storage" value={stats.avgStorage.toFixed(1)} />
-                <Stat label="Climb rate" value={pct(stats.climbSuccessRate)} />
               </div>
             )}
           </section>
@@ -140,6 +126,18 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
                   <span>Driver rating: {pitReport.driverRating}</span>
                   <span>Defense rating: {pitReport.defenseRating}</span>
                 </div>
+                <p className="text-muted-foreground">
+                  {pitReport.hasAuto
+                    ? [
+                        `Auto: ${pitReport.autoBalls ?? 0} balls`,
+                        pitReport.autoSide &&
+                          `prefers ${pitReport.autoSide}/${pitReport.autoDepth ?? 'close'}`,
+                        pitReport.autoClimb && 'climbs in auto',
+                      ]
+                        .filter(Boolean)
+                        .join(', ')
+                    : 'No auto'}
+                </p>
                 {pitReport.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {pitReport.tags.map((tag) => (
@@ -154,45 +152,6 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
             )}
           </section>
 
-          <Separator />
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-medium">Match reports</h3>
-            {sortedMatches === undefined ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
-            ) : sortedMatches.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No match reports yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {sortedMatches.map((report) => (
-                  <div key={report._id} className="rounded-lg border bg-card p-2.5 text-sm text-card-foreground">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Match {report.matchNumber}</span>
-                      <span className="text-xs text-muted-foreground">{report.scoutName ?? 'Unknown scout'}</span>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      <span>
-                        {report.ballsScored} scored / {report.ballsMissed} missed
-                      </span>
-                      <span>Storage: {report.maxStorage}</span>
-                      {report.climbAttempted && <span>{report.climbSucceeded ? 'Climbed' : 'Climb failed'}</span>}
-                      {report.playedDefense && <span>Played defense</span>}
-                    </div>
-                    {report.tags.length > 0 && (
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        {report.tags.map((tag) => (
-                          <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {report.notes && <p className="mt-1 text-xs">{report.notes}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
         </div>
       </div>
     </>
@@ -236,7 +195,7 @@ export function TeamDetail({
         <DialogContent className="flex max-h-[85vh] flex-col gap-3 sm:max-w-lg">
           <DialogHeader className="sr-only">
             <DialogTitle>{team ? `#${team.number} — ${team.nickname}` : 'Team detail'}</DialogTitle>
-            <DialogDescription>Pit scouting, match reports, and stats for this team.</DialogDescription>
+            <DialogDescription>Scouting report and stats for this team.</DialogDescription>
           </DialogHeader>
           {body}
         </DialogContent>
@@ -249,7 +208,7 @@ export function TeamDetail({
       <SheetContent side="bottom" className="flex max-h-[85vh] flex-col gap-3 px-4 pb-4">
         <SheetHeader className="sr-only p-0">
           <SheetTitle>{team ? `#${team.number} — ${team.nickname}` : 'Team detail'}</SheetTitle>
-          <SheetDescription>Pit scouting, match reports, and stats for this team.</SheetDescription>
+          <SheetDescription>Scouting report and stats for this team.</SheetDescription>
         </SheetHeader>
         {body}
       </SheetContent>

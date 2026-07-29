@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 import { TierBadge } from '@/components/team-detail'
-import type { TeamWithStatus } from '@/components/kanban/team-card'
+import type { TeamWithStatus } from '@/components/picklist/tier-list'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,

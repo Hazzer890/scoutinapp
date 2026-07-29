@@ -49,6 +49,14 @@ export default defineSchema({
     canScoreBalls: v.boolean(),
     canClimb: v.boolean(),
     storageCapacity: v.optional(v.number()),
+    // Estimated balls scored per match; feeds the picklist metrics and benchmark %.
+    ballsPerMatch: v.optional(v.number()),
+    // Autonomous period. The auto* fields are only meaningful when hasAuto is true.
+    hasAuto: v.optional(v.boolean()),
+    autoSide: v.optional(v.union(v.literal("left"), v.literal("middle"), v.literal("right"))),
+    autoDepth: v.optional(v.union(v.literal("close"), v.literal("middle"))),
+    autoBalls: v.optional(v.number()),
+    autoClimb: v.optional(v.boolean()),
     driverRating: v.number(),
     defenseRating: v.number(),
     tags: v.array(v.string()),
@@ -57,24 +65,6 @@ export default defineSchema({
   })
     .index("by_team", ["teamId"])
     .index("by_event", ["eventId"]),
-  matchReports: defineTable({
-    eventId: v.id("events"),
-    teamId: v.id("teams"),
-    matchId: v.optional(v.id("matches")),
-    matchNumber: v.number(),
-    scoutId: v.id("users"),
-    ballsScored: v.number(),
-    ballsMissed: v.number(),
-    maxStorage: v.number(),
-    climbAttempted: v.boolean(),
-    climbSucceeded: v.boolean(),
-    playedDefense: v.boolean(),
-    tags: v.array(v.string()),
-    notes: v.optional(v.string()),
-  })
-    .index("by_team", ["teamId"])
-    .index("by_event", ["eventId"])
-    .index("by_scout", ["scoutId"]),
   picklists: defineTable({
     eventId: v.id("events"),
     ownerId: v.optional(v.id("users")), // absent = primary (admin-only) list

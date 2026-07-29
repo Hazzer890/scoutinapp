@@ -129,7 +129,7 @@ describe("events.setActive", () => {
 });
 
 describe("teams.listWithStatus", () => {
-  test("reports pitScouted/matchReportCount and personal/primary tiers", async () => {
+  test("reports pitScouted and personal/primary tiers", async () => {
     const t = setupTest();
     const eventId = await createEvent(t);
     const scoutedTeamId = await createTeam(t, eventId, 100);
@@ -149,21 +149,6 @@ describe("teams.listWithStatus", () => {
         defenseRating: 2,
         tags: [],
       });
-      for (let i = 0; i < 2; i++) {
-        await ctx.db.insert("matchReports", {
-          eventId,
-          teamId: scoutedTeamId,
-          matchNumber: i + 1,
-          scoutId,
-          ballsScored: 5,
-          ballsMissed: 1,
-          maxStorage: 3,
-          climbAttempted: false,
-          climbSucceeded: false,
-          playedDefense: false,
-          tags: [],
-        });
-      }
       // Scout's personal picklist (ownerId set).
       await ctx.db.insert("picklists", {
         eventId,
@@ -183,12 +168,10 @@ describe("teams.listWithStatus", () => {
     const scoutUnscouted = scoutView.find((team) => team._id === unscoutedTeamId);
 
     expect(scoutScouted?.pitScouted).toBe(true);
-    expect(scoutScouted?.matchReportCount).toBe(2);
     expect(scoutScouted?.personalTier).toBe("S");
     expect(scoutScouted?.primaryTier).toBeNull();
 
     expect(scoutUnscouted?.pitScouted).toBe(false);
-    expect(scoutUnscouted?.matchReportCount).toBe(0);
     expect(scoutUnscouted?.personalTier).toBeNull();
 
     const asAdmin = t.withIdentity({ subject: adminId });
@@ -200,7 +183,7 @@ describe("teams.listWithStatus", () => {
 });
 
 describe("teams.remove", () => {
-  test("cascades to pit reports, match reports, and picklist entries", async () => {
+  test("cascades to pit reports and picklist entries", async () => {
     const t = setupTest();
     const eventId = await createEvent(t);
     const teamId = await createTeam(t, eventId, 100);
@@ -208,7 +191,7 @@ describe("teams.remove", () => {
     const adminId = await createUser(t, "admin");
     const scoutId = await createUser(t, "scout");
 
-    const { pitReportId, matchReportId, picklistId } = await t.run(async (ctx) => {
+    const { pitReportId, picklistId } = await t.run(async (ctx) => {
       const pitReportId = await ctx.db.insert("pitReports", {
         eventId,
         teamId,
@@ -219,19 +202,6 @@ describe("teams.remove", () => {
         defenseRating: 4,
         tags: [],
       });
-      const matchReportId = await ctx.db.insert("matchReports", {
-        eventId,
-        teamId,
-        matchNumber: 1,
-        scoutId,
-        ballsScored: 1,
-        ballsMissed: 1,
-        maxStorage: 1,
-        climbAttempted: true,
-        climbSucceeded: true,
-        playedDefense: true,
-        tags: [],
-      });
       const picklistId = await ctx.db.insert("picklists", {
         eventId,
         ownerId: scoutId,
@@ -240,13 +210,12 @@ describe("teams.remove", () => {
           { teamId: otherTeamId, tier: "A", rank: 1 },
         ],
       });
-      return { pitReportId, matchReportId, picklistId };
+      return { pitReportId, picklistId };
     });
 
     await t.withIdentity({ subject: adminId }).mutation(api.teams.remove, { teamId });
 
     expect(await t.run((ctx) => ctx.db.get(pitReportId))).toBeNull();
-    expect(await t.run((ctx) => ctx.db.get(matchReportId))).toBeNull();
     expect(await t.run((ctx) => ctx.db.get(teamId))).toBeNull();
     const picklist = await t.run((ctx) => ctx.db.get(picklistId));
     expect(picklist?.entries).toEqual([{ teamId: otherTeamId, tier: "A", rank: 1 }]);

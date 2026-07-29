@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 
-export const TELEOP_SECONDS = 135;
 export const BENCHMARK_TEAM = 4788;
 
 export const TIERS = ["S", "A", "B", "C", "D", "DNP"] as const;

@@ -7,7 +7,8 @@ import { toast } from 'sonner'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import type { Tier } from '../../convex/lib/constants'
-import { Board } from '@/components/kanban/board'
+import { RobotTinder } from '@/components/picklist/robot-tinder'
+import { TierList } from '@/components/picklist/tier-list'
 import { MergeDialog } from '@/components/merge-dialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,7 +20,14 @@ import {
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-type View = 'mine' | 'primary' | 'scouts'
+type View = 'mine' | 'primary' | 'scouts' | 'tinder'
+
+const DESCRIPTIONS: Record<View, string> = {
+  mine: 'Tap a tier badge to rank a team; arrows reorder within a tier.',
+  primary: 'The shared primary list used during alliance selection.',
+  scouts: 'Read-only view of another scout’s list.',
+  tinder: 'Swipe through unranked robots and file each one into a tier.',
+}
 
 function Picklist() {
   const me = useQuery(api.users.me)
@@ -59,55 +67,50 @@ function Picklist() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">Pick List</h1>
-          <p className="text-sm text-muted-foreground">
-            {readOnly
-              ? 'Read-only view of another scout’s list.'
-              : view === 'primary'
-                ? 'The shared primary list used during alliance selection.'
-                : 'Drag teams between tiers to rank them.'}
-          </p>
+          <p className="text-sm text-muted-foreground">{DESCRIPTIONS[view]}</p>
         </div>
 
-        {isAdmin && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Tabs value={view} onValueChange={(value) => setView(value as View)}>
-              <TabsList>
-                <TabsTrigger value="mine">My list</TabsTrigger>
-                <TabsTrigger value="primary">Primary</TabsTrigger>
-                <TabsTrigger value="scouts">Scouts</TabsTrigger>
-              </TabsList>
-            </Tabs>
+        <div className="flex flex-wrap items-center gap-2">
+          <Tabs value={view} onValueChange={(value) => setView(value as View)}>
+            <TabsList>
+              <TabsTrigger value="mine">My list</TabsTrigger>
+              {isAdmin && <TabsTrigger value="primary">Primary</TabsTrigger>}
+              {isAdmin && <TabsTrigger value="scouts">Scouts</TabsTrigger>}
+              <TabsTrigger value="tinder">Robot Tinder</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-            {readOnly && (
-              <Select
-                value={activeScoutId}
-                onValueChange={(value) => setScoutId(value as Id<'users'>)}
-              >
-                <SelectTrigger className="min-w-40" aria-label="Scout">
-                  <SelectValue>
-                    {(value: string | null) =>
-                      value === null
-                        ? 'No scout lists'
-                        : (scoutLists?.find((l) => l.scoutId === value)?.scoutName ?? 'Unnamed scout')
-                    }
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {(scoutLists ?? []).map((list) => (
-                    <SelectItem key={list.scoutId} value={list.scoutId}>
-                      {list.scoutName ?? 'Unnamed scout'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+          {readOnly && (
+            <Select
+              value={activeScoutId}
+              onValueChange={(value) => setScoutId(value as Id<'users'>)}
+            >
+              <SelectTrigger className="min-w-40" aria-label="Scout">
+                <SelectValue>
+                  {(value: string | null) =>
+                    value === null
+                      ? 'No scout lists'
+                      : (scoutLists?.find((l) => l.scoutId === value)?.scoutName ?? 'Unnamed scout')
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {(scoutLists ?? []).map((list) => (
+                  <SelectItem key={list.scoutId} value={list.scoutId}>
+                    {list.scoutName ?? 'Unnamed scout'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
+          {isAdmin && (
             <Button variant="outline" onClick={() => setMergeOpen(true)}>
               <GitMergeIcon />
               Merge
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {teams === undefined || entries === undefined || (readOnly && scoutLists === undefined) ? (
@@ -118,8 +121,16 @@ function Picklist() {
         </p>
       ) : readOnly && !scoutList ? (
         <p className="text-muted-foreground">No scout has started a pick list yet.</p>
+      ) : view === 'tinder' ? (
+        // Tinder always files into YOUR list, regardless of admin tabs.
+        <RobotTinder
+          entries={mine?.entries ?? []}
+          teams={teams}
+          stats={stats ?? {}}
+          onAssign={(teamId, tier) => void handleMove(teamId, tier, 9999)}
+        />
       ) : (
-        <Board
+        <TierList
           key={readOnly ? `scout-${activeScoutId}` : view}
           entries={entries}
           teams={teams}

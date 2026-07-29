@@ -15,7 +15,6 @@ import type * as lib_consensus from "../lib/consensus.js";
 import type * as lib_constants from "../lib/constants.js";
 import type * as lib_statsMath from "../lib/statsMath.js";
 import type * as lib_tbaMapping from "../lib/tbaMapping.js";
-import type * as matchReports from "../matchReports.js";
 import type * as matches from "../matches.js";
 import type * as model_authz from "../model/authz.js";
 import type * as picklists from "../picklists.js";
@@ -41,7 +40,6 @@ declare const fullApi: ApiFromModules<{
   "lib/constants": typeof lib_constants;
   "lib/statsMath": typeof lib_statsMath;
   "lib/tbaMapping": typeof lib_tbaMapping;
-  matchReports: typeof matchReports;
   matches: typeof matches;
   "model/authz": typeof model_authz;
   picklists: typeof picklists;

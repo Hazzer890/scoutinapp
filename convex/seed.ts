@@ -7,7 +7,7 @@ const TEAM_NUMBERS = [4788, 254, 1114, 2056, 1678, 3476, 118, 5460, 6800, 195, 2
 
 // Tables this seed owns. Deliberately excludes users/authTables — signed-in
 // accounts (including whoever runs the e2e suite) must survive a reseed.
-const WIPE_TABLES = ["pitReports", "matchReports", "picklists", "matches", "teams", "events"] as const;
+const WIPE_TABLES = ["pitReports", "picklists", "matches", "teams", "events"] as const;
 
 export const dev = internalMutation({
   args: {},
@@ -66,50 +66,23 @@ export const dev = internalMutation({
     // rather than failing the whole seed.
     const scout = await ctx.db.query("users").first();
     if (scout) {
-      for (const teamId of teamIds.slice(0, 4)) {
+      // Team 4788 (index 0) gets ballsPerMatch 20 so it works as the benchmark.
+      const ballEstimates = [20, 10, 12, 8];
+      for (let i = 0; i < 4; i++) {
         await ctx.db.insert("pitReports", {
           eventId,
-          teamId,
+          teamId: teamIds[i],
           scoutId: scout._id,
           canScoreBalls: true,
           canClimb: true,
           storageCapacity: 5,
-          driverRating: 7,
-          defenseRating: 5,
+          ballsPerMatch: ballEstimates[i],
+          driverRating: 5,
+          defenseRating: 4,
           tags: ["Fast"],
         });
       }
 
-      // Team 4788 (index 0) gets three reports so it works as the throughput benchmark.
-      const benchmarkReports = [
-        { ballsScored: 20, ballsMissed: 4, maxStorage: 5, climbAttempted: true, climbSucceeded: true },
-        { ballsScored: 18, ballsMissed: 3, maxStorage: 4, climbAttempted: true, climbSucceeded: true },
-        { ballsScored: 22, ballsMissed: 5, maxStorage: 5, climbAttempted: false, climbSucceeded: false },
-      ];
-      for (let i = 0; i < benchmarkReports.length; i++) {
-        await ctx.db.insert("matchReports", {
-          eventId,
-          teamId: teamIds[0],
-          matchNumber: i + 1,
-          scoutId: scout._id,
-          ...benchmarkReports[i],
-          playedDefense: false,
-          tags: [],
-        });
-      }
-      await ctx.db.insert("matchReports", {
-        eventId,
-        teamId: teamIds[1],
-        matchNumber: 1,
-        scoutId: scout._id,
-        ballsScored: 10,
-        ballsMissed: 2,
-        maxStorage: 3,
-        climbAttempted: false,
-        climbSucceeded: false,
-        playedDefense: true,
-        tags: ["Plays defense"],
-      });
     }
 
     return { eventId, teams: teamIds.length, matches: matchCount };

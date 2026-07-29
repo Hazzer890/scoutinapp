@@ -81,7 +81,7 @@ describe("pitReports.submit", () => {
 });
 
 describe("authz on submit", () => {
-  test("pitReports.submit and matchReports.submit reject unauthenticated callers", async () => {
+  test("pitReports.submit rejects unauthenticated callers", async () => {
     const t = setupTest();
     const eventId = await createEvent(t);
     const teamId = await createTeam(t, eventId, 100);
@@ -96,159 +96,69 @@ describe("authz on submit", () => {
         tags: [],
       }),
     ).rejects.toThrow("Not signed in");
-
-    await expect(
-      t.mutation(api.matchReports.submit, {
-        teamId,
-        matchNumber: 1,
-        ballsScored: 1,
-        ballsMissed: 0,
-        maxStorage: 1,
-        climbAttempted: false,
-        climbSucceeded: false,
-        playedDefense: false,
-        tags: [],
-      }),
-    ).rejects.toThrow("Not signed in");
   });
 });
 
-describe("matchReports.listForTeam", () => {
-  test("tolerates a dangling matchId without throwing", async () => {
-    const t = setupTest();
-    const eventId = await createEvent(t);
-    const teamId = await createTeam(t, eventId, 100);
-    const scoutId = await createUser(t, "scout");
-    const danglingMatchId = await t.run((ctx) =>
-      ctx.db.insert("matches", { eventId, matchNumber: 1, redTeams: [100], blueTeams: [200] }),
-    );
-
-    await t.run(async (ctx) => {
-      await ctx.db.insert("matchReports", {
-        eventId,
-        teamId,
-        matchId: danglingMatchId,
-        matchNumber: 1,
-        scoutId,
-        ballsScored: 5,
-        ballsMissed: 1,
-        maxStorage: 3,
-        climbAttempted: true,
-        climbSucceeded: true,
-        playedDefense: false,
-        tags: [],
-      });
-      await ctx.db.delete(danglingMatchId);
-    });
-
-    const reports = await t.withIdentity({ subject: scoutId }).query(api.matchReports.listForTeam, {
-      teamId,
-    });
-    expect(reports).toHaveLength(1);
-    expect(reports[0].matchId).toBe(danglingMatchId);
-    expect(reports[0].scoutName).toBeNull();
+async function submitPit(
+  t: Test,
+  scoutId: Id<"users">,
+  teamId: Id<"teams">,
+  ballsPerMatch?: number,
+) {
+  await t.withIdentity({ subject: scoutId }).mutation(api.pitReports.submit, {
+    teamId,
+    canScoreBalls: true,
+    canClimb: false,
+    ballsPerMatch,
+    driverRating: 3,
+    defenseRating: 3,
+    tags: [],
   });
-});
+}
 
 describe("stats.forEvent and stats.forTeam", () => {
-  test("computes per-team stats and benchmark percentage against team 4788", async () => {
+  test("reports ballsPerMatch and percentage of benchmark team 4788", async () => {
     const t = setupTest();
     const eventId = await createEvent(t);
     const teamId = await createTeam(t, eventId, 100);
     const benchmarkTeamId = await createTeam(t, eventId, BENCHMARK_TEAM);
     const scoutId = await createUser(t, "scout");
 
-    await t.run(async (ctx) => {
-      // Benchmark team: avgBalls = 20 -> throughputBps = 20/135
-      await ctx.db.insert("matchReports", {
-        eventId,
-        teamId: benchmarkTeamId,
-        matchNumber: 1,
-        scoutId,
-        ballsScored: 20,
-        ballsMissed: 0,
-        maxStorage: 5,
-        climbAttempted: false,
-        climbSucceeded: false,
-        playedDefense: false,
-        tags: [],
-      });
-      // Team 100: avgBalls = 10 -> throughputBps = 10/135 -> 50% of benchmark
-      await ctx.db.insert("matchReports", {
-        eventId,
-        teamId,
-        matchNumber: 1,
-        scoutId,
-        ballsScored: 8,
-        ballsMissed: 2,
-        maxStorage: 3,
-        climbAttempted: true,
-        climbSucceeded: true,
-        playedDefense: false,
-        tags: [],
-      });
-      await ctx.db.insert("matchReports", {
-        eventId,
-        teamId,
-        matchNumber: 2,
-        scoutId,
-        ballsScored: 12,
-        ballsMissed: 3,
-        maxStorage: 3,
-        climbAttempted: false,
-        climbSucceeded: false,
-        playedDefense: false,
-        tags: [],
-      });
-    });
+    await submitPit(t, scoutId, benchmarkTeamId, 20);
+    await submitPit(t, scoutId, teamId, 10);
 
     const asScout = t.withIdentity({ subject: scoutId });
     const all = await asScout.query(api.stats.forEvent, {});
 
-    expect(all[teamId].matchCount).toBe(2);
-    expect(all[teamId].avgBalls).toBe(10);
-    expect(all[teamId].accuracy).toBeCloseTo(20 / 25);
-    expect(all[teamId].climbSuccessRate).toBe(1);
-    expect(all[teamId].throughputPctOfBenchmark).toBeCloseTo(50);
-
-    expect(all[benchmarkTeamId].throughputPctOfBenchmark).toBeCloseTo(100);
+    expect(all[teamId].ballsPerMatch).toBe(10);
+    expect(all[teamId].pctOfBenchmark).toBeCloseTo(50);
+    expect(all[benchmarkTeamId].pctOfBenchmark).toBeCloseTo(100);
 
     const single = await asScout.query(api.stats.forTeam, { teamId });
     expect(single).toEqual(all[teamId]);
   });
 
-  test("throughputPctOfBenchmark is null when team 4788 has no reports", async () => {
+  test("pctOfBenchmark is null when team 4788 has no estimate", async () => {
     const t = setupTest();
     const eventId = await createEvent(t);
     const teamId = await createTeam(t, eventId, 100);
     await createTeam(t, eventId, BENCHMARK_TEAM);
     const scoutId = await createUser(t, "scout");
 
-    await t.run((ctx) =>
-      ctx.db.insert("matchReports", {
-        eventId,
-        teamId,
-        matchNumber: 1,
-        scoutId,
-        ballsScored: 5,
-        ballsMissed: 0,
-        maxStorage: 2,
-        climbAttempted: false,
-        climbSucceeded: false,
-        playedDefense: false,
-        tags: [],
-      }),
-    );
+    await submitPit(t, scoutId, teamId, 5);
 
     const all = await t.withIdentity({ subject: scoutId }).query(api.stats.forEvent, {});
-    expect(all[teamId].throughputPctOfBenchmark).toBeNull();
+    expect(all[teamId].pctOfBenchmark).toBeNull();
   });
 
-  test("stats.forTeam returns null when the team has no reports", async () => {
+  test("stats.forTeam returns null when the team has no ball estimate", async () => {
     const t = setupTest();
     const eventId = await createEvent(t);
     const teamId = await createTeam(t, eventId, 100);
     const scoutId = await createUser(t, "scout");
+
+    // A pit report without ballsPerMatch yields no stats entry.
+    await submitPit(t, scoutId, teamId, undefined);
 
     const single = await t.withIdentity({ subject: scoutId }).query(api.stats.forTeam, { teamId });
     expect(single).toBeNull();

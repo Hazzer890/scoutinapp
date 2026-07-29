@@ -3,7 +3,6 @@ import { getActiveEvent } from "./events";
 import { tierValidator } from "./lib/constants";
 import { requireAdmin, requireUser } from "./model/authz";
 import { mutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
 
 export const teamValidator = v.object({
   _id: v.id("teams"),
@@ -36,7 +35,6 @@ export const listWithStatus = query({
   returns: v.array(
     teamValidator.extend({
       pitScouted: v.boolean(),
-      matchReportCount: v.number(),
       personalTier: v.union(tierValidator, v.null()),
       primaryTier: v.union(tierValidator, v.null()),
     }),
@@ -56,15 +54,6 @@ export const listWithStatus = query({
       .withIndex("by_event", (q) => q.eq("eventId", event._id))
       .collect();
     const pitScoutedTeamIds = new Set(pitReports.map((r) => r.teamId));
-
-    const matchReports = await ctx.db
-      .query("matchReports")
-      .withIndex("by_event", (q) => q.eq("eventId", event._id))
-      .collect();
-    const matchReportCounts = new Map<Id<"teams">, number>();
-    for (const r of matchReports) {
-      matchReportCounts.set(r.teamId, (matchReportCounts.get(r.teamId) ?? 0) + 1);
-    }
 
     const personalList = await ctx.db
       .query("picklists")
@@ -88,7 +77,6 @@ export const listWithStatus = query({
     return teams.map((team) => ({
       ...team,
       pitScouted: pitScoutedTeamIds.has(team._id),
-      matchReportCount: matchReportCounts.get(team._id) ?? 0,
       personalTier: personalTierByTeam.get(team._id) ?? null,
       primaryTier: primaryTierByTeam.get(team._id) ?? null,
     }));
@@ -137,12 +125,6 @@ export const remove = mutation({
       .withIndex("by_team", (q) => q.eq("teamId", teamId))
       .collect();
     for (const report of pitReports) await ctx.db.delete(report._id);
-
-    const matchReports = await ctx.db
-      .query("matchReports")
-      .withIndex("by_team", (q) => q.eq("teamId", teamId))
-      .collect();
-    for (const report of matchReports) await ctx.db.delete(report._id);
 
     const team = await ctx.db.get(teamId);
     if (team) {

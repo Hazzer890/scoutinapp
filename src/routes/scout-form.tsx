@@ -56,8 +56,8 @@ function RatingRow({
   return (
     <div className="space-y-2">
       <span className="text-sm font-medium text-muted-foreground">{label}</span>
-      <div role="group" aria-label={label} className="grid grid-cols-5 gap-2">
-        {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+      <div role="group" aria-label={label} className="grid grid-cols-6 gap-2">
+        {Array.from({ length: 6 }, (_, i) => i + 1).map((n) => (
           <button
             key={n}
             type="button"
@@ -71,6 +71,42 @@ function RatingRow({
             )}
           >
             {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function SegmentedRow<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: readonly { value: T; label: string }[]
+  value: T
+  onChange: (v: T) => void
+}) {
+  return (
+    <div className="space-y-2">
+      <span className="text-sm font-medium text-muted-foreground">{label}</span>
+      <div role="group" aria-label={label} className="grid auto-cols-fr grid-flow-col gap-2">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={value === option.value}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              'h-12 rounded-lg border text-sm font-medium transition-colors',
+              value === option.value
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-input bg-background hover:bg-muted',
+            )}
+          >
+            {option.label}
           </button>
         ))}
       </div>
@@ -133,7 +169,7 @@ function TagChips({ tags, onChange }: { tags: string[]; onChange: (tags: string[
   )
 }
 
-function PitForm({ teamId }: { teamId: Id<'teams'> }) {
+function ScoutForm({ teamId }: { teamId: Id<'teams'> }) {
   const navigate = useNavigate()
   const team = useQuery(api.teams.get, { teamId })
   const existing = useQuery(api.pitReports.getForTeam, { teamId })
@@ -144,8 +180,14 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
   const [canScoreBalls, setCanScoreBalls] = useState(false)
   const [canClimb, setCanClimb] = useState(false)
   const [storageCapacity, setStorageCapacity] = useState(0)
-  const [driverRating, setDriverRating] = useState(5)
-  const [defenseRating, setDefenseRating] = useState(5)
+  const [ballsPerMatch, setBallsPerMatch] = useState(0)
+  const [hasAuto, setHasAuto] = useState(false)
+  const [autoSide, setAutoSide] = useState<'left' | 'middle' | 'right'>('middle')
+  const [autoDepth, setAutoDepth] = useState<'close' | 'middle'>('close')
+  const [autoBalls, setAutoBalls] = useState(0)
+  const [autoClimb, setAutoClimb] = useState(false)
+  const [driverRating, setDriverRating] = useState(3)
+  const [defenseRating, setDefenseRating] = useState(3)
   const [tags, setTags] = useState<string[]>([])
   const [notes, setNotes] = useState('')
   const [photoId, setPhotoId] = useState<Id<'_storage'> | undefined>(undefined)
@@ -159,8 +201,15 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
       setCanScoreBalls(existing.canScoreBalls)
       setCanClimb(existing.canClimb)
       setStorageCapacity(existing.storageCapacity ?? 0)
-      setDriverRating(existing.driverRating)
-      setDefenseRating(existing.defenseRating)
+      setBallsPerMatch(existing.ballsPerMatch ?? 0)
+      setHasAuto(existing.hasAuto ?? false)
+      setAutoSide(existing.autoSide ?? 'middle')
+      setAutoDepth(existing.autoDepth ?? 'close')
+      setAutoBalls(existing.autoBalls ?? 0)
+      setAutoClimb(existing.autoClimb ?? false)
+      // Older reports were rated out of 10; clamp them onto the 1-6 scale.
+      setDriverRating(Math.min(6, existing.driverRating))
+      setDefenseRating(Math.min(6, existing.defenseRating))
       setTags(existing.tags)
       setNotes(existing.notes ?? '')
       setPhotoId(existing.photoId)
@@ -201,6 +250,12 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
         canScoreBalls,
         canClimb,
         storageCapacity,
+        ballsPerMatch,
+        hasAuto,
+        autoSide: hasAuto ? autoSide : undefined,
+        autoDepth: hasAuto ? autoDepth : undefined,
+        autoBalls: hasAuto ? autoBalls : undefined,
+        autoClimb: hasAuto ? autoClimb : undefined,
         driverRating,
         defenseRating,
         tags,
@@ -208,7 +263,7 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
         notes: notes.trim() || undefined,
       })
       toast.success('Pit report saved')
-      navigate('/pit')
+      navigate('/scout')
     } catch {
       toast.error('Could not save pit report')
       setSubmitting(false)
@@ -225,7 +280,7 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
   return (
     <div className="space-y-6 pb-24">
       <div>
-        <Link to="/pit" className="text-sm text-muted-foreground underline">
+        <Link to="/scout" className="text-sm text-muted-foreground underline">
           Back to teams
         </Link>
         <h1 className="text-2xl font-semibold">
@@ -238,12 +293,49 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
         <ToggleCard label="Can climb" checked={canClimb} onChange={setCanClimb} />
       </div>
 
-      <Stepper
-        label="Storage capacity"
-        value={storageCapacity}
-        onChange={setStorageCapacity}
-        min={0}
-      />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Stepper
+          label="Storage capacity"
+          value={storageCapacity}
+          onChange={setStorageCapacity}
+          min={0}
+        />
+        <Stepper
+          label="Est. balls per match"
+          value={ballsPerMatch}
+          onChange={setBallsPerMatch}
+          min={0}
+        />
+      </div>
+
+      <div className="space-y-3">
+        <ToggleCard label="Has auto" checked={hasAuto} onChange={setHasAuto} />
+        {hasAuto && (
+          <div className="space-y-4 rounded-lg border p-3">
+            <SegmentedRow
+              label="Preferred side"
+              options={[
+                { value: 'left', label: 'Left' },
+                { value: 'middle', label: 'Middle' },
+                { value: 'right', label: 'Right' },
+              ]}
+              value={autoSide}
+              onChange={setAutoSide}
+            />
+            <SegmentedRow
+              label="Preferred depth"
+              options={[
+                { value: 'close', label: 'Close' },
+                { value: 'middle', label: 'Middle' },
+              ]}
+              value={autoDepth}
+              onChange={setAutoDepth}
+            />
+            <Stepper label="Auto balls" value={autoBalls} onChange={setAutoBalls} min={0} />
+            <ToggleCard label="Climbs in auto" checked={autoClimb} onChange={setAutoClimb} />
+          </div>
+        )}
+      </div>
 
       <RatingRow label="Driver rating" value={driverRating} onChange={setDriverRating} />
       <RatingRow label="Defense rating" value={defenseRating} onChange={setDefenseRating} />
@@ -291,14 +383,14 @@ function PitForm({ teamId }: { teamId: Id<'teams'> }) {
           disabled={submitting || uploading}
           onClick={() => void handleSubmit()}
         >
-          {submitting ? 'Saving…' : 'Submit'}
+          {submitting ? 'Saving…' : 'Save report'}
         </Button>
       </div>
     </div>
   )
 }
 
-export function PitFormPage() {
+export function ScoutFormPage() {
   const { teamId } = useParams<{ teamId: string }>()
 
   if (!teamId) {
@@ -312,14 +404,14 @@ export function PitFormPage() {
       </AuthLoading>
       <Unauthenticated>
         <p className="text-muted-foreground">
-          Sign in to view pit scouting.{' '}
+          Sign in to scout teams.{' '}
           <Link to="/sign-in" className="underline">
             Sign in
           </Link>
         </p>
       </Unauthenticated>
       <Authenticated>
-        <PitForm teamId={teamId as Id<'teams'>} />
+        <ScoutForm teamId={teamId as Id<'teams'>} />
       </Authenticated>
     </>
   )
