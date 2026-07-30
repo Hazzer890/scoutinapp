@@ -34,7 +34,8 @@ export const listWithStatus = query({
   args: {},
   returns: v.array(
     teamValidator.extend({
-      pitScouted: v.boolean(),
+      scoutedByMe: v.boolean(),
+      scoutCount: v.number(),
       personalTier: v.union(tierValidator, v.null()),
       primaryTier: v.union(tierValidator, v.null()),
     }),
@@ -53,7 +54,12 @@ export const listWithStatus = query({
       .query("pitReports")
       .withIndex("by_event", (q) => q.eq("eventId", event._id))
       .collect();
-    const pitScoutedTeamIds = new Set(pitReports.map((r) => r.teamId));
+    const scoutCountByTeam = new Map<string, number>();
+    const myScoutedTeamIds = new Set<string>();
+    for (const report of pitReports) {
+      scoutCountByTeam.set(report.teamId, (scoutCountByTeam.get(report.teamId) ?? 0) + 1);
+      if (report.scoutId === user._id) myScoutedTeamIds.add(report.teamId);
+    }
 
     const personalList = await ctx.db
       .query("picklists")
@@ -76,7 +82,8 @@ export const listWithStatus = query({
 
     return teams.map((team) => ({
       ...team,
-      pitScouted: pitScoutedTeamIds.has(team._id),
+      scoutedByMe: myScoutedTeamIds.has(team._id),
+      scoutCount: scoutCountByTeam.get(team._id) ?? 0,
       personalTier: personalTierByTeam.get(team._id) ?? null,
       primaryTier: primaryTierByTeam.get(team._id) ?? null,
     }));

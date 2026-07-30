@@ -149,6 +149,16 @@ describe("teams.listWithStatus", () => {
         defenseRating: 2,
         tags: [],
       });
+      await ctx.db.insert("pitReports", {
+        eventId,
+        teamId: scoutedTeamId,
+        scoutId: adminId,
+        canScoreBalls: true,
+        canClimb: true,
+        driverRating: 4,
+        defenseRating: 3,
+        tags: [],
+      });
       // Scout's personal picklist (ownerId set).
       await ctx.db.insert("picklists", {
         eventId,
@@ -167,11 +177,13 @@ describe("teams.listWithStatus", () => {
     const scoutScouted = scoutView.find((team) => team._id === scoutedTeamId);
     const scoutUnscouted = scoutView.find((team) => team._id === unscoutedTeamId);
 
-    expect(scoutScouted?.pitScouted).toBe(true);
+    expect(scoutScouted?.scoutedByMe).toBe(true);
+    expect(scoutScouted?.scoutCount).toBe(2);
     expect(scoutScouted?.personalTier).toBe("S");
     expect(scoutScouted?.primaryTier).toBeNull();
 
-    expect(scoutUnscouted?.pitScouted).toBe(false);
+    expect(scoutUnscouted?.scoutedByMe).toBe(false);
+    expect(scoutUnscouted?.scoutCount).toBe(0);
     expect(scoutUnscouted?.personalTier).toBeNull();
 
     const asAdmin = t.withIdentity({ subject: adminId });

@@ -18,21 +18,30 @@ async function statsForEvent(ctx: QueryCtx, eventId: Id<"events">) {
     .withIndex("by_event", (q) => q.eq("eventId", eventId))
     .collect();
 
+  const ballsByTeam = new Map<Id<"teams">, number[]>();
+  for (const report of reports) {
+    if (report.ballsPerMatch === undefined) continue;
+    const values = ballsByTeam.get(report.teamId);
+    if (values) values.push(report.ballsPerMatch);
+    else ballsByTeam.set(report.teamId, [report.ballsPerMatch]);
+  }
+  const meanFor = (teamId: Id<"teams">) => {
+    const values = ballsByTeam.get(teamId);
+    if (!values) return null;
+    return Math.round((values.reduce((sum, x) => sum + x, 0) / values.length) * 10) / 10;
+  };
+
   const benchmarkTeam = await ctx.db
     .query("teams")
     .withIndex("by_event_number", (q) => q.eq("eventId", eventId).eq("number", BENCHMARK_TEAM))
     .first();
-  const benchmarkBalls = benchmarkTeam
-    ? (reports.find((r) => r.teamId === benchmarkTeam._id)?.ballsPerMatch ?? null)
-    : null;
+  const benchmarkBalls = benchmarkTeam ? meanFor(benchmarkTeam._id) : null;
 
   const result: Record<string, { ballsPerMatch: number; pctOfBenchmark: number | null }> = {};
-  for (const report of reports) {
-    if (report.ballsPerMatch === undefined) continue;
-    result[report.teamId] = {
-      ballsPerMatch: report.ballsPerMatch,
-      pctOfBenchmark: benchmarkPct(report.ballsPerMatch, benchmarkBalls),
-    };
+  for (const teamId of ballsByTeam.keys()) {
+    const balls = meanFor(teamId);
+    if (balls === null) continue;
+    result[teamId] = { ballsPerMatch: balls, pctOfBenchmark: benchmarkPct(balls, benchmarkBalls) };
   }
   return result;
 }

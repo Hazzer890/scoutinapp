@@ -127,6 +127,74 @@ async function submitPit(
   });
 }
 
+describe("pitReports.getMine and aggregateForTeam", () => {
+  test("getMine returns only the caller's report", async () => {
+    const t = setupTest();
+    const eventId = await createEvent(t);
+    const teamId = await createTeam(t, eventId, 100);
+    const scoutA = await createUser(t, "scout");
+    const scoutB = await createUser(t, "scout");
+
+    await submitPit(t, scoutA, teamId, 4);
+
+    const mine = await t.withIdentity({ subject: scoutA }).query(api.pitReports.getMine, { teamId });
+    expect(mine?.scoutId).toBe(scoutA);
+    expect(mine?.ballsPerMatch).toBe(4);
+    expect(mine?.photoUrl).toBeNull();
+
+    const theirs = await t.withIdentity({ subject: scoutB }).query(api.pitReports.getMine, { teamId });
+    expect(theirs).toBeNull();
+  });
+
+  test("aggregateForTeam averages across scouts and resolves note names", async () => {
+    const t = setupTest();
+    const eventId = await createEvent(t);
+    const teamId = await createTeam(t, eventId, 100);
+    const scoutA = await createUser(t, "scout");
+    const scoutB = await createUser(t, "scout");
+    await t.run((ctx) => ctx.db.patch(scoutA, { name: "Alice" }));
+
+    await t.withIdentity({ subject: scoutA }).mutation(api.pitReports.submit, {
+      teamId,
+      canScoreBalls: true,
+      canClimb: true,
+      ballsPerMatch: 4,
+      driverRating: 5,
+      defenseRating: 2,
+      tags: ["Fast"],
+      notes: "solid",
+    });
+    await t.withIdentity({ subject: scoutB }).mutation(api.pitReports.submit, {
+      teamId,
+      canScoreBalls: true,
+      canClimb: false,
+      ballsPerMatch: 5,
+      driverRating: 2,
+      defenseRating: 3,
+      tags: ["Fast", "Tippy"],
+    });
+
+    const agg = await t
+      .withIdentity({ subject: scoutA })
+      .query(api.pitReports.aggregateForTeam, { teamId });
+    expect(agg?.scoutCount).toBe(2);
+    expect(agg?.canClimb).toEqual({ yes: 1, total: 2 });
+    expect(agg?.ballsPerMatch).toBe(4.5);
+    expect(agg?.driverRating).toBe(3.5);
+    expect(agg?.tags).toEqual([
+      { tag: "Fast", count: 2 },
+      { tag: "Tippy", count: 1 },
+    ]);
+    expect(agg?.notes).toEqual([{ scoutName: "Alice", note: "solid" }]);
+    expect(agg?.photoUrl).toBeNull();
+
+    const empty = await t
+      .withIdentity({ subject: scoutA })
+      .query(api.pitReports.aggregateForTeam, { teamId: await createTeam(t, eventId, 200) });
+    expect(empty).toBeNull();
+  });
+});
+
 describe("stats.forEvent and stats.forTeam", () => {
   test("reports ballsPerMatch and percentage of benchmark team 4788", async () => {
     const t = setupTest();
@@ -160,6 +228,25 @@ describe("stats.forEvent and stats.forTeam", () => {
 
     const all = await t.withIdentity({ subject: scoutId }).query(api.stats.forEvent, {});
     expect(all[teamId].pctOfBenchmark).toBeNull();
+  });
+
+  test("ballsPerMatch and benchmark use per-team means across scouts", async () => {
+    const t = setupTest();
+    const eventId = await createEvent(t);
+    const teamId = await createTeam(t, eventId, 100);
+    const benchmarkTeamId = await createTeam(t, eventId, BENCHMARK_TEAM);
+    const scoutA = await createUser(t, "scout");
+    const scoutB = await createUser(t, "scout");
+
+    await submitPit(t, scoutA, teamId, 4);
+    await submitPit(t, scoutB, teamId, 6); // mean 5
+    await submitPit(t, scoutA, benchmarkTeamId, 10);
+    await submitPit(t, scoutB, benchmarkTeamId, 30); // mean 20
+
+    const all = await t.withIdentity({ subject: scoutA }).query(api.stats.forEvent, {});
+    expect(all[teamId].ballsPerMatch).toBe(5);
+    expect(all[teamId].pctOfBenchmark).toBeCloseTo(25);
+    expect(all[benchmarkTeamId].pctOfBenchmark).toBeCloseTo(100);
   });
 
   test("stats.forTeam returns null when the team has no ball estimate", async () => {
