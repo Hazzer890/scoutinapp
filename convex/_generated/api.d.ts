@@ -13,6 +13,7 @@ import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as lib_consensus from "../lib/consensus.js";
 import type * as lib_constants from "../lib/constants.js";
+import type * as lib_pitAggregate from "../lib/pitAggregate.js";
 import type * as lib_statsMath from "../lib/statsMath.js";
 import type * as lib_tbaMapping from "../lib/tbaMapping.js";
 import type * as matches from "../matches.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/consensus": typeof lib_consensus;
   "lib/constants": typeof lib_constants;
+  "lib/pitAggregate": typeof lib_pitAggregate;
   "lib/statsMath": typeof lib_statsMath;
   "lib/tbaMapping": typeof lib_tbaMapping;
   matches: typeof matches;
