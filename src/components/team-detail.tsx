@@ -60,7 +60,7 @@ function useIsDesktop() {
 
 function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: boolean }) {
   const stats = useQuery(api.stats.forTeam, { teamId: team._id })
-  const pitReport = useQuery(api.pitReports.getForTeam, { teamId: team._id })
+  const agg = useQuery(api.pitReports.aggregateForTeam, { teamId: team._id })
 
   const location = [team.city, team.stateProv, team.country].filter(Boolean).join(', ')
 
@@ -103,51 +103,57 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
           <Separator />
 
           <section className="space-y-2">
-            <h3 className="text-sm font-medium">Pit scouting</h3>
-            {pitReport === undefined ? (
+            <h3 className="text-sm font-medium">
+              Pit scouting{agg ? ` (${agg.scoutCount} scout${agg.scoutCount === 1 ? '' : 's'})` : ''}
+            </h3>
+            {agg === undefined ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
-            ) : pitReport === null ? (
+            ) : agg === null ? (
               <p className="text-sm text-muted-foreground">Not scouted yet.</p>
             ) : (
               <div className="space-y-2 text-sm">
-                {pitReport.photoUrl && (
+                {agg.photoUrl && (
                   <img
-                    src={pitReport.photoUrl}
+                    src={agg.photoUrl}
                     alt={`${team.nickname} robot`}
                     className="max-h-48 w-full rounded-md object-cover"
                   />
                 )}
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
-                  <span>{pitReport.canScoreBalls ? 'Scores balls' : 'Cannot score balls'}</span>
-                  <span>{pitReport.canClimb ? 'Can climb' : 'Cannot climb'}</span>
-                  {pitReport.storageCapacity !== undefined && <span>Storage: {pitReport.storageCapacity}</span>}
+                  <BoolRow label="scores balls" yes={agg.canScoreBalls.yes} total={agg.canScoreBalls.total} />
+                  <BoolRow label="climbs" yes={agg.canClimb.yes} total={agg.canClimb.total} />
+                  {agg.storageCapacity !== null && <span>Storage: {agg.storageCapacity}</span>}
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
-                  <span>Driver rating: {pitReport.driverRating}</span>
-                  <span>Defense rating: {pitReport.defenseRating}</span>
+                  {agg.driverRating !== null && <span>Driver rating: {agg.driverRating}</span>}
+                  {agg.defenseRating !== null && <span>Defense rating: {agg.defenseRating}</span>}
                 </div>
                 <p className="text-muted-foreground">
-                  {pitReport.hasAuto
+                  {agg.hasAuto.yes > 0
                     ? [
-                        `Auto: ${pitReport.autoBalls ?? 0} balls`,
-                        pitReport.autoSide &&
-                          `prefers ${pitReport.autoSide}/${pitReport.autoDepth ?? 'close'}`,
-                        pitReport.autoClimb && 'climbs in auto',
+                        `Auto (${agg.hasAuto.yes}/${agg.hasAuto.total}): ${agg.autoBalls ?? 0} balls`,
+                        agg.autoSide && `prefers ${agg.autoSide.value}/${agg.autoDepth?.value ?? 'close'}`,
+                        agg.autoClimb.yes > 0 && `${agg.autoClimb.yes}/${agg.autoClimb.total} climb in auto`,
                       ]
                         .filter(Boolean)
                         .join(', ')
                     : 'No auto'}
                 </p>
-                {pitReport.tags.length > 0 && (
+                {agg.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
-                    {pitReport.tags.map((tag) => (
+                    {agg.tags.map(({ tag, count }) => (
                       <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs">
                         {tag}
+                        {count > 1 && <span className="text-muted-foreground"> ×{count}</span>}
                       </span>
                     ))}
                   </div>
                 )}
-                {pitReport.notes && <p>{pitReport.notes}</p>}
+                {agg.notes.map(({ scoutName, note }, i) => (
+                  <p key={i}>
+                    <span className="font-medium">{scoutName}:</span> {note}
+                  </p>
+                ))}
               </div>
             )}
           </section>
@@ -155,6 +161,14 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
         </div>
       </div>
     </>
+  )
+}
+
+function BoolRow({ label, yes, total }: { label: string; yes: number; total: number }) {
+  return (
+    <span>
+      {yes}/{total} say {label}
+    </span>
   )
 }
 

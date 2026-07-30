@@ -25,22 +25,6 @@ export const pitReportValidator = v.object({
   notes: v.optional(v.string()),
 });
 
-export const getForTeam = query({
-  args: { teamId: v.id("teams") },
-  returns: v.union(pitReportValidator.extend({ photoUrl: v.union(v.string(), v.null()) }), v.null()),
-  handler: async (ctx, { teamId }) => {
-    await requireUser(ctx);
-    const report = await ctx.db
-      .query("pitReports")
-      .withIndex("by_team", (q) => q.eq("teamId", teamId))
-      .order("desc")
-      .first();
-    if (!report) return null;
-    const photoUrl = report.photoId ? await ctx.storage.getUrl(report.photoId) : null;
-    return { ...report, photoUrl };
-  },
-});
-
 export const getMine = query({
   args: { teamId: v.id("teams") },
   returns: v.union(pitReportValidator.extend({ photoUrl: v.union(v.string(), v.null()) }), v.null()),

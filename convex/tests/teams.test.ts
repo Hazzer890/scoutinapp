@@ -129,7 +129,7 @@ describe("events.setActive", () => {
 });
 
 describe("teams.listWithStatus", () => {
-  test("reports pitScouted and personal/primary tiers", async () => {
+  test("reports scoutedByMe/scoutCount and personal/primary tiers", async () => {
     const t = setupTest();
     const eventId = await createEvent(t);
     const scoutedTeamId = await createTeam(t, eventId, 100);
