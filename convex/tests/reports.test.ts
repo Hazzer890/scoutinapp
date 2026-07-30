@@ -195,6 +195,44 @@ describe("pitReports.getMine and aggregateForTeam", () => {
   });
 });
 
+describe("pitReports.leaderboard", () => {
+  test("ranks by count desc, ties broken by earliest finish", async () => {
+    const t = setupTest();
+    const eventId = await createEvent(t);
+    const teamA = await createTeam(t, eventId, 100);
+    const teamB = await createTeam(t, eventId, 200);
+    const alice = await createUser(t, "scout");
+    const bob = await createUser(t, "scout");
+    const carol = await createUser(t, "scout");
+    await t.run((ctx) => ctx.db.patch(alice, { name: "Alice" }));
+    await t.run((ctx) => ctx.db.patch(bob, { name: "Bob" }));
+
+    // Bob scouts 2 teams and finishes before Alice scouts her 2 teams.
+    await submitPit(t, bob, teamA);
+    await submitPit(t, bob, teamB);
+    await submitPit(t, alice, teamA);
+    await submitPit(t, alice, teamB);
+    // Carol scouts 1 team. Unnamed → "Scout".
+    await submitPit(t, carol, teamA);
+    // Alice edits an existing report — must NOT reset her finish time.
+    await submitPit(t, alice, teamA, 9);
+
+    const board = await t.withIdentity({ subject: alice }).query(api.pitReports.leaderboard, {});
+    expect(board).toEqual([
+      { scoutId: bob, scoutName: "Bob", count: 2 },
+      { scoutId: alice, scoutName: "Alice", count: 2 },
+      { scoutId: carol, scoutName: "Scout", count: 1 },
+    ]);
+  });
+
+  test("returns [] when there is no active event", async () => {
+    const t = setupTest();
+    const scoutId = await createUser(t, "scout");
+    const board = await t.withIdentity({ subject: scoutId }).query(api.pitReports.leaderboard, {});
+    expect(board).toEqual([]);
+  });
+});
+
 describe("stats.forEvent and stats.forTeam", () => {
   test("reports ballsPerMatch and percentage of benchmark team 4788", async () => {
     const t = setupTest();

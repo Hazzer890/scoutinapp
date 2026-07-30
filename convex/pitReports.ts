@@ -1,5 +1,7 @@
 import { ConvexError, v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import { getActiveEvent } from "./events";
 import { aggregatePitReports } from "./lib/pitAggregate";
 import { requireUser } from "./model/authz";
 
@@ -134,6 +136,42 @@ export const submit = mutation({
       await ctx.db.insert("pitReports", doc);
     }
     return null;
+  },
+});
+
+export const leaderboard = query({
+  args: {},
+  returns: v.array(
+    v.object({ scoutId: v.id("users"), scoutName: v.string(), count: v.number() }),
+  ),
+  handler: async (ctx) => {
+    await requireUser(ctx);
+    const event = await getActiveEvent(ctx);
+    if (!event) return [];
+    const reports = await ctx.db
+      .query("pitReports")
+      .withIndex("by_event", (q) => q.eq("eventId", event._id))
+      .collect();
+
+    const byScout = new Map<Id<"users">, { count: number; lastAt: number }>();
+    for (const report of reports) {
+      const entry = byScout.get(report.scoutId) ?? { count: 0, lastAt: 0 };
+      entry.count++;
+      entry.lastAt = Math.max(entry.lastAt, report._creationTime);
+      byScout.set(report.scoutId, entry);
+    }
+
+    // Ties go to whoever reached the count first: earlier latest-report time
+    // wins. db.replace preserves _creationTime, so edits don't move it.
+    const ranked = [...byScout.entries()].sort(
+      ([, a], [, b]) => b.count - a.count || a.lastAt - b.lastAt,
+    );
+    return await Promise.all(
+      ranked.map(async ([scoutId, { count }]) => {
+        const scout = await ctx.db.get(scoutId);
+        return { scoutId, scoutName: scout?.name ?? "Scout", count };
+      }),
+    );
   },
 });
 
