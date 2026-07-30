@@ -66,9 +66,8 @@ export const submit = mutation({
 
     const existing = await ctx.db
       .query("pitReports")
-      .withIndex("by_team", (q) => q.eq("teamId", teamId))
-      .order("desc")
-      .first();
+      .withIndex("by_team_scout", (q) => q.eq("teamId", teamId).eq("scoutId", user._id))
+      .unique();
     const doc = { eventId: team.eventId, teamId, scoutId: user._id, ...fields };
     if (existing) {
       await ctx.db.replace(existing._id, doc);

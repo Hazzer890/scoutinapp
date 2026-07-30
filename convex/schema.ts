@@ -64,6 +64,7 @@ export default defineSchema({
     notes: v.optional(v.string()),
   })
     .index("by_team", ["teamId"])
+    .index("by_team_scout", ["teamId", "scoutId"])
     .index("by_event", ["eventId"]),
   picklists: defineTable({
     eventId: v.id("events"),

@@ -29,7 +29,7 @@ async function createTeam(t: Test, eventId: Id<"events">, number: number) {
 }
 
 describe("pitReports.submit", () => {
-  test("upserts by teamId: a second submit replaces the first, by any scout", async () => {
+  test("scouts do not overwrite each other; resubmit replaces only the caller's report", async () => {
     const t = setupTest();
     const eventId = await createEvent(t);
     const teamId = await createTeam(t, eventId, 100);
@@ -46,8 +46,6 @@ describe("pitReports.submit", () => {
       tags: ["Tippy"],
       notes: "Slow but steady",
     });
-
-    // Second submit omits storageCapacity/notes entirely: they must not survive from the first.
     await t.withIdentity({ subject: secondScout }).mutation(api.pitReports.submit, {
       teamId,
       canScoreBalls: false,
@@ -63,20 +61,33 @@ describe("pitReports.submit", () => {
         .withIndex("by_team", (q) => q.eq("teamId", teamId))
         .collect(),
     );
-    expect(reports).toHaveLength(1);
-    expect(reports[0].scoutId).toBe(secondScout);
-    expect(reports[0].driverRating).toBe(5);
-    expect(reports[0].tags).toEqual(["Fast"]);
-    expect(reports[0].storageCapacity).toBeUndefined();
-    expect(reports[0].notes).toBeUndefined();
+    expect(reports).toHaveLength(2);
+    expect(new Set(reports.map((r) => r.scoutId))).toEqual(new Set([firstScout, secondScout]));
 
-    const fetched = await t.withIdentity({ subject: firstScout }).query(api.pitReports.getForTeam, {
+    // Resubmit by the first scout replaces their report only. Omitted optional
+    // fields (storageCapacity, notes) must not survive from their first submit.
+    await t.withIdentity({ subject: firstScout }).mutation(api.pitReports.submit, {
       teamId,
+      canScoreBalls: true,
+      canClimb: true,
+      driverRating: 3,
+      defenseRating: 3,
+      tags: [],
     });
-    expect(fetched?.driverRating).toBe(5);
-    expect(fetched?.photoUrl).toBeNull();
-    expect(fetched?.storageCapacity).toBeUndefined();
-    expect(fetched?.notes).toBeUndefined();
+
+    const after = await t.run((ctx) =>
+      ctx.db
+        .query("pitReports")
+        .withIndex("by_team", (q) => q.eq("teamId", teamId))
+        .collect(),
+    );
+    expect(after).toHaveLength(2);
+    const firstReport = after.find((r) => r.scoutId === firstScout);
+    const secondReport = after.find((r) => r.scoutId === secondScout);
+    expect(firstReport?.driverRating).toBe(3);
+    expect(firstReport?.storageCapacity).toBeUndefined();
+    expect(firstReport?.notes).toBeUndefined();
+    expect(secondReport?.driverRating).toBe(5);
   });
 });
 
