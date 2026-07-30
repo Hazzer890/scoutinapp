@@ -43,6 +43,7 @@ export function CardNav() {
       links: [
         { to: '/scout', label: 'Scout Teams' },
         { to: '/picklist', label: 'Pick List' },
+        { to: '/leaderboard', label: 'Leaderboard' },
       ],
     },
     ...(me?.role === 'admin' ? [{ label: 'Manage', links: [{ to: '/admin', label: 'Admin' }] }] : []),

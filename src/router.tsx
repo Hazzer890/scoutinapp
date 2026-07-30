@@ -7,6 +7,7 @@ import { TeamsPage } from '@/routes/teams'
 import { ScoutPage } from '@/routes/scout'
 import { ScoutFormPage } from '@/routes/scout-form'
 import { PicklistPage } from '@/routes/picklist'
+import { LeaderboardPage } from '@/routes/leaderboard'
 import { AdminPage } from '@/routes/admin'
 import { ErrorPage } from '@/routes/error'
 
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
       { path: 'scout', Component: ScoutPage },
       { path: 'scout/:teamId', Component: ScoutFormPage },
       { path: 'picklist', Component: PicklistPage },
+      { path: 'leaderboard', Component: LeaderboardPage },
       {
         path: 'admin',
         element: (
