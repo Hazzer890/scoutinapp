@@ -67,6 +67,20 @@ export const setRoleByEmail = internalMutation({
   },
 });
 
+export const setName = mutation({
+  args: { userId: v.id("users"), name: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { userId, name }) => {
+    await requireAdmin(ctx);
+    const trimmed = name.trim();
+    if (!trimmed) throw new ConvexError("Name cannot be empty");
+    const target = await ctx.db.get(userId);
+    if (!target) throw new ConvexError("User not found");
+    await ctx.db.patch(userId, { name: trimmed });
+    return null;
+  },
+});
+
 export const setRole = mutation({
   args: { userId: v.id("users"), role: roleValidator },
   returns: v.null(),

@@ -89,3 +89,39 @@ describe("users.setRole", () => {
     expect(user?.role).toBe("admin");
   });
 });
+
+describe("users.setName", () => {
+  test("admin renames a user; input is trimmed", async () => {
+    const t = setupTest();
+    const adminId = await createUser(t, "admin");
+    const scoutId = await createUser(t, "scout");
+
+    await t.withIdentity({ subject: adminId }).mutation(api.users.setName, {
+      userId: scoutId,
+      name: "  Alice  ",
+    });
+
+    const scout = await t.run((ctx) => ctx.db.get(scoutId));
+    expect(scout?.name).toBe("Alice");
+  });
+
+  test("rejects scouts and empty names", async () => {
+    const t = setupTest();
+    const adminId = await createUser(t, "admin");
+    const scoutId = await createUser(t, "scout");
+
+    await expect(
+      t.withIdentity({ subject: scoutId }).mutation(api.users.setName, {
+        userId: adminId,
+        name: "Hacker",
+      }),
+    ).rejects.toThrow("Admin only");
+
+    await expect(
+      t.withIdentity({ subject: adminId }).mutation(api.users.setName, {
+        userId: scoutId,
+        name: "   ",
+      }),
+    ).rejects.toThrow("Name cannot be empty");
+  });
+});
