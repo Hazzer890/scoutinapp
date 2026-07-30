@@ -172,7 +172,7 @@ function TagChips({ tags, onChange }: { tags: string[]; onChange: (tags: string[
 function ScoutForm({ teamId }: { teamId: Id<'teams'> }) {
   const navigate = useNavigate()
   const team = useQuery(api.teams.get, { teamId })
-  const existing = useQuery(api.pitReports.getForTeam, { teamId })
+  const existing = useQuery(api.pitReports.getMine, { teamId })
   const generateUploadUrl = useMutation(api.pitReports.generateUploadUrl)
   const submit = useMutation(api.pitReports.submit)
 

@@ -16,7 +16,7 @@ function Dashboard() {
   const me = useQuery(api.users.me)
 
   const totalTeams = teams?.length ?? 0
-  const teamsScouted = teams?.filter((t) => t.pitScouted).length ?? 0
+  const teamsScouted = teams?.filter((t) => t.scoutCount > 0).length ?? 0
 
   return (
     <div className="space-y-6">

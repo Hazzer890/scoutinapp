@@ -21,9 +21,14 @@ function TeamGrid() {
           to={`/scout/${team._id}`}
           className="relative flex h-24 flex-col items-center justify-center gap-0.5 rounded-lg border bg-card text-card-foreground transition-colors hover:bg-muted"
         >
-          {team.pitScouted && (
+          {team.scoutedByMe && (
             <span className="absolute top-2 right-2 flex size-5 items-center justify-center rounded-full bg-green-600 text-white">
               <CheckIcon className="size-3.5" />
+            </span>
+          )}
+          {team.scoutCount > 0 && (
+            <span className="absolute top-2 left-2 rounded-full bg-muted px-1.5 text-xs tabular-nums text-muted-foreground">
+              {team.scoutCount}
             </span>
           )}
           <span className="text-2xl font-semibold tabular-nums">{team.number}</span>

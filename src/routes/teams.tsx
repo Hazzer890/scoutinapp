@@ -76,7 +76,7 @@ function TeamsList() {
                   <span className="text-sm">{team.nickname}</span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <PitStatusBadge scouted={team.pitScouted} />
+                  <PitStatusBadge count={team.scoutCount} />
                   <TierBadge tier={team.personalTier} />
                   {isAdmin && team.primaryTier && team.primaryTier !== team.personalTier && (
                     <TierBadge tier={team.primaryTier} label="Primary:" />

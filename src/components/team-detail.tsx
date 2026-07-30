@@ -33,15 +33,15 @@ export function TierBadge({ tier, label }: { tier: string | null | undefined; la
   )
 }
 
-export function PitStatusBadge({ scouted }: { scouted: boolean }) {
+export function PitStatusBadge({ count }: { count: number }) {
   return (
     <span
       className={cn(
         'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-        scouted ? 'bg-green-500/15 text-green-700 dark:text-green-300' : 'bg-muted text-muted-foreground',
+        count > 0 ? 'bg-green-500/15 text-green-700 dark:text-green-300' : 'bg-muted text-muted-foreground',
       )}
     >
-      {scouted ? 'Scouted' : 'Not Scouted'}
+      {count > 0 ? `${count} scout${count === 1 ? '' : 's'}` : 'Not Scouted'}
     </span>
   )
 }
@@ -74,7 +74,7 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <PitStatusBadge scouted={team.pitScouted} />
+        <PitStatusBadge count={team.scoutCount} />
         <TierBadge tier={team.personalTier} />
         {isAdmin && team.primaryTier && team.primaryTier !== team.personalTier && (
           <TierBadge tier={team.primaryTier} label="Primary:" />

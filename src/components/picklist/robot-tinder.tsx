@@ -66,7 +66,7 @@ export function RobotTinder({
               <p className="text-xs text-muted-foreground">of benchmark</p>
             </div>
           </div>
-          {!current.pitScouted && (
+          {current.scoutCount === 0 && (
             <p className="mt-3 text-xs text-muted-foreground italic">Not scouted yet</p>
           )}
         </div>
