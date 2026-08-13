@@ -37,7 +37,14 @@ export function CardNav() {
   }, [])
 
   const cards = [
-    { label: 'Browse', links: [{ to: '/', label: 'Home' }, { to: '/teams', label: 'Teams' }] },
+    {
+      label: 'Browse',
+      links: [
+        { to: '/', label: 'Home' },
+        { to: '/teams', label: 'Teams' },
+        { to: '/gallery', label: 'Gallery' },
+      ],
+    },
     {
       label: 'Scout',
       links: [

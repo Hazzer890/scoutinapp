@@ -9,6 +9,7 @@ const quickLinks = [
   { to: '/scout', label: 'Scout Teams' },
   { to: '/picklist', label: 'Pick List' },
   { to: '/leaderboard', label: 'Leaderboard' },
+  { to: '/gallery', label: 'Gallery' },
 ]
 
 function Dashboard() {

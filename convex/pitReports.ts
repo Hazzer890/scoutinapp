@@ -175,6 +175,39 @@ export const leaderboard = query({
   },
 });
 
+export const photosForEvent = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      teamId: v.id("teams"),
+      teamNumber: v.number(),
+      nickname: v.string(),
+      photoUrl: v.string(),
+    }),
+  ),
+  handler: async (ctx) => {
+    await requireUser(ctx);
+    const event = await getActiveEvent(ctx);
+    if (!event) return [];
+    const reports = await ctx.db
+      .query("pitReports")
+      .withIndex("by_event", (q) => q.eq("eventId", event._id))
+      .collect();
+
+    const photos: { teamId: Id<"teams">; teamNumber: number; nickname: string; photoUrl: string }[] = [];
+    for (const report of reports) {
+      if (!report.photoId) continue;
+      const team = await ctx.db.get(report.teamId);
+      if (!team) continue;
+      const photoUrl = await ctx.storage.getUrl(report.photoId);
+      if (!photoUrl) continue;
+      photos.push({ teamId: report.teamId, teamNumber: team.number, nickname: team.nickname, photoUrl });
+    }
+    photos.sort((a, b) => a.teamNumber - b.teamNumber);
+    return photos;
+  },
+});
+
 export const generateUploadUrl = mutation({
   args: {},
   returns: v.string(),

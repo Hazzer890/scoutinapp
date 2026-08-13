@@ -233,6 +233,48 @@ describe("pitReports.leaderboard", () => {
   });
 });
 
+describe("pitReports.photosForEvent", () => {
+  test("returns photo reports sorted by team number, skipping photo-less reports", async () => {
+    const t = setupTest();
+    const eventId = await createEvent(t);
+    const team200 = await createTeam(t, eventId, 200);
+    const team100 = await createTeam(t, eventId, 100);
+    const scoutA = await createUser(t, "scout");
+    const scoutB = await createUser(t, "scout");
+
+    const [photoA, photoB] = await t.run(async (ctx) => [
+      await ctx.storage.store(new Blob(["a"])),
+      await ctx.storage.store(new Blob(["b"])),
+    ]);
+
+    await t.run(async (ctx) => {
+      const base = {
+        eventId,
+        canScoreBalls: true,
+        canClimb: false,
+        driverRating: 3,
+        defenseRating: 3,
+        tags: [] as string[],
+      };
+      await ctx.db.insert("pitReports", { ...base, teamId: team200, scoutId: scoutA, photoId: photoA });
+      await ctx.db.insert("pitReports", { ...base, teamId: team100, scoutId: scoutB, photoId: photoB });
+      await ctx.db.insert("pitReports", { ...base, teamId: team100, scoutId: scoutA }); // no photo
+    });
+
+    const photos = await t.withIdentity({ subject: scoutA }).query(api.pitReports.photosForEvent, {});
+    expect(photos.map((p) => p.teamNumber)).toEqual([100, 200]);
+    expect(photos[0].nickname).toBe("Team 100");
+    expect(photos[0].photoUrl).toContain("http");
+  });
+
+  test("returns [] when there is no active event", async () => {
+    const t = setupTest();
+    const scoutId = await createUser(t, "scout");
+    const photos = await t.withIdentity({ subject: scoutId }).query(api.pitReports.photosForEvent, {});
+    expect(photos).toEqual([]);
+  });
+});
+
 describe("stats.forEvent and stats.forTeam", () => {
   test("reports ballsPerMatch and percentage of benchmark team 4788", async () => {
     const t = setupTest();
