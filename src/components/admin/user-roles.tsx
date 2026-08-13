@@ -39,7 +39,7 @@ function EditableName({ userId, name }: { userId: Id<'users'>; name: string | nu
         <Button
           variant="ghost"
           size="icon"
-          className="size-6 shrink-0"
+          className="shrink-0"
           aria-label="Edit name"
           onClick={startEditing}
         >
@@ -62,10 +62,10 @@ function EditableName({ userId, name }: { userId: Id<'users'>; name: string | nu
         className="h-8"
         aria-label="Name"
       />
-      <Button variant="ghost" size="icon" className="size-6 shrink-0" aria-label="Save name" onClick={() => void save()}>
+      <Button variant="ghost" size="icon" className="shrink-0" aria-label="Save name" onClick={() => void save()}>
         <CheckIcon className="size-3.5" />
       </Button>
-      <Button variant="ghost" size="icon" className="size-6 shrink-0" aria-label="Cancel" onClick={() => setEditing(false)}>
+      <Button variant="ghost" size="icon" className="shrink-0" aria-label="Cancel" onClick={() => setEditing(false)}>
         <XIcon className="size-3.5" />
       </Button>
     </div>
