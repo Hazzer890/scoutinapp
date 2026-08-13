@@ -2,6 +2,7 @@ import { Authenticated, AuthLoading, Unauthenticated, useQuery } from 'convex/re
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { api } from '../../convex/_generated/api'
+import { FilterChips } from '@/components/filter-chips'
 import { Input } from '@/components/ui/input'
 import { PitStatusBadge, TierBadge, TeamDetail } from '@/components/team-detail'
 import type { FunctionReturnType } from 'convex/server'
@@ -13,6 +14,7 @@ function TeamsList() {
   const me = useQuery(api.users.me)
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState('')
+  const [filter, setFilter] = useState<'all' | 'scouted' | 'unscouted'>('all')
 
   const isAdmin = me?.role === 'admin'
   const teamsLoading = teams === undefined
@@ -34,9 +36,12 @@ function TeamsList() {
   const filtered = useMemo(() => {
     if (!teams) return []
     const q = search.trim().toLowerCase()
-    if (!q) return teams
-    return teams.filter((t) => t.number.toString().includes(q) || t.nickname.toLowerCase().includes(q))
-  }, [teams, search])
+    const bySearch = q
+      ? teams.filter((t) => t.number.toString().includes(q) || t.nickname.toLowerCase().includes(q))
+      : teams
+    if (filter === 'all') return bySearch
+    return bySearch.filter((t) => (filter === 'scouted' ? t.scoutCount > 0 : t.scoutCount === 0))
+  }, [teams, search, filter])
 
   function closeDetail() {
     setSearchParams(
@@ -57,6 +62,15 @@ function TeamsList() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         aria-label="Search teams"
+      />
+      <FilterChips
+        options={[
+          { value: 'all', label: 'All' },
+          { value: 'scouted', label: 'Scouted' },
+          { value: 'unscouted', label: 'Unscouted' },
+        ]}
+        value={filter}
+        onChange={setFilter}
       />
 
       {teams === undefined ? (

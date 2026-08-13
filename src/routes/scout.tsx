@@ -1,10 +1,13 @@
 import { Authenticated, AuthLoading, Unauthenticated, useQuery } from 'convex/react'
 import { CheckIcon } from 'lucide-react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { api } from '../../convex/_generated/api'
+import { FilterChips } from '@/components/filter-chips'
 
 function TeamGrid() {
   const teams = useQuery(api.teams.listWithStatus)
+  const [filter, setFilter] = useState<'all' | 'todo' | 'done'>('all')
 
   if (teams === undefined) {
     return <p className="text-muted-foreground">Loading…</p>
@@ -13,9 +16,26 @@ function TeamGrid() {
     return <p className="text-muted-foreground">No teams for the active event.</p>
   }
 
+  const filtered = teams.filter((t) =>
+    filter === 'all' ? true : filter === 'done' ? t.scoutedByMe : !t.scoutedByMe,
+  )
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-      {teams.map((team) => (
+    <div className="space-y-3">
+      <FilterChips
+        options={[
+          { value: 'all', label: 'All' },
+          { value: 'todo', label: 'To scout' },
+          { value: 'done', label: 'Scouted' },
+        ]}
+        value={filter}
+        onChange={setFilter}
+      />
+      {filtered.length === 0 ? (
+        <p className="text-muted-foreground">No teams match this filter.</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {filtered.map((team) => (
         <Link
           key={team._id}
           to={`/scout/${team._id}`}
@@ -34,7 +54,9 @@ function TeamGrid() {
           <span className="text-2xl font-semibold tabular-nums">{team.number}</span>
           <span className="line-clamp-1 px-2 text-xs text-muted-foreground">{team.nickname}</span>
         </Link>
-      ))}
+          ))}
+        </div>
+      )}
     </div>
   )
 }
