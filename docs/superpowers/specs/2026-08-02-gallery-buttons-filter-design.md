@@ -22,9 +22,9 @@ Client-side `useState`, default All, no backend changes, no URL persistence.
 
 ## 3. Photo gallery page
 
-New query `pitReports.photosForEvent` (no args, `requireUser`): active-event reports that have a `photoId` → `[{ teamId, teamNumber, nickname, photoUrl }]` sorted by team number (a team appears once per scout photo). No active event → `[]`. Reports whose storage URL resolves to null are skipped.
+New query `pitReports.photosForEvent` (no args, `requireUser`): active-event reports that have a `photoId`, grouped by team → `[{ teamId, teamNumber, nickname, photos: [{ photoUrl, scoutName }] }]` sorted by team number, each team once (upstream issue #2). No active event → `[]`. Reports whose storage URL resolves to null are skipped.
 
-New route `/gallery` (`src/routes/gallery.tsx`), auth-gated like other pages: responsive grid of photos, team number + nickname overlaid at the bottom of each tile, tile links to `/teams?team=<teamId>`. Empty state: "No robot photos yet." Nav: "Gallery" link in the Browse card of `card-nav.tsx`; quick link on home.
+New route `/gallery` (`src/routes/gallery.tsx`), auth-gated like other pages: one collapsed row per team showing a cover thumbnail, team number, nickname and photo count; the row is a disclosure button that drops down a responsive grid of that team's photos (scout name overlaid on each) plus a "View team details" link to `/teams?team=<teamId>`. Empty state: "No robot photos yet." Nav: "Gallery" link in the Browse card of `card-nav.tsx`; quick link on home.
 
 ## Testing
 
