@@ -41,6 +41,7 @@ export function CardNav() {
       label: 'Browse',
       links: [
         { to: '/', label: 'Home' },
+        { to: '/next-match', label: 'Next Match' },
         { to: '/teams', label: 'Teams' },
         { to: '/gallery', label: 'Gallery' },
       ],

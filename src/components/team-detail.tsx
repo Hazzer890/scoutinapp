@@ -5,6 +5,7 @@ import { api } from '../../convex/_generated/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
+import { WatchButton } from '@/components/watch-button'
 import { cn } from '@/lib/utils'
 
 type TeamWithStatus = FunctionReturnType<typeof api.teams.listWithStatus>[number]
@@ -67,13 +68,20 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
   return (
     <>
       <div className={cn('flex flex-col gap-0.5')} data-slot="team-detail-header">
-        <p className="font-heading text-base font-medium">
+        {/* pr-10 keeps the title clear of the dialog/sheet close button. */}
+        <p className="font-heading text-base font-medium pr-10">
           #{team.number} — {team.nickname}
         </p>
         <p className="text-sm text-muted-foreground">{location || 'Location not available'}</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
+        <WatchButton
+          teamId={team._id}
+          watched={team.watchedByMe}
+          label={`team ${team.number}`}
+          variant="pill"
+        />
         <PitStatusBadge count={team.scoutCount} />
         <TierBadge tier={team.personalTier} />
         {isAdmin && team.primaryTier && team.primaryTier !== team.personalTier && (

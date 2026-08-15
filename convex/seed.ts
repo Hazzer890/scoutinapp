@@ -7,7 +7,7 @@ const TEAM_NUMBERS = [4788, 254, 1114, 2056, 1678, 3476, 118, 5460, 6800, 195, 2
 
 // Tables this seed owns. Deliberately excludes users/authTables — signed-in
 // accounts (including whoever runs the e2e suite) must survive a reseed.
-const WIPE_TABLES = ["pitReports", "picklists", "matches", "teams", "events"] as const;
+const WIPE_TABLES = ["pitReports", "picklists", "watchlist", "matches", "teams", "events"] as const;
 
 export const dev = internalMutation({
   args: {},
@@ -51,14 +51,19 @@ export const dev = internalMutation({
     }
 
     // 6 quals, 3v3, each team's index offset by 4 so red/blue never collide within a match.
+    // Q1 is already played (scored) so the Next Match view has something to skip past.
     const matchCount = 6;
     for (let i = 0; i < matchCount; i++) {
+      const played = i === 0;
       await ctx.db.insert("matches", {
         eventId,
         matchNumber: i + 1,
         redTeams: [TEAM_NUMBERS[i % 12], TEAM_NUMBERS[(i + 4) % 12], TEAM_NUMBERS[(i + 8) % 12]],
         blueTeams: [TEAM_NUMBERS[(i + 1) % 12], TEAM_NUMBERS[(i + 5) % 12], TEAM_NUMBERS[(i + 9) % 12]],
-        scheduledTime: Date.now() + i * 10 * 60 * 1000,
+        scheduledTime: Date.now() + (i - 1) * 10 * 60 * 1000,
+        ...(played
+          ? { actualTime: Date.now() - 8 * 60 * 1000, redScore: 74, blueScore: 61 }
+          : {}),
       });
     }
 

@@ -10,7 +10,7 @@ export function FilterChips<T extends string>({
   onChange: (v: T) => void
 }) {
   return (
-    <div role="group" aria-label="Filter" className="flex gap-2">
+    <div role="group" aria-label="Filter" className="flex flex-wrap gap-2">
       {options.map((option) => (
         <button
           key={option.value}

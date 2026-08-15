@@ -20,6 +20,9 @@ export default defineSchema({
     tbaKey: v.string(),
     name: v.string(),
     isActive: v.boolean(),
+    // Last time the match schedule was pulled from TBA; drives the "updated Xm ago"
+    // label and the staleness check on the Next Match page.
+    matchesSyncedAt: v.optional(v.number()),
   })
     .index("by_active", ["isActive"])
     .index("by_tba_key", ["tbaKey"]),
@@ -41,6 +44,14 @@ export default defineSchema({
     redTeams: v.array(v.number()),
     blueTeams: v.array(v.number()),
     scheduledTime: v.optional(v.number()),
+    // TBA's rolling estimate of when an unplayed match will actually run; it
+    // drifts from scheduledTime as the event runs ahead of / behind schedule.
+    predictedTime: v.optional(v.number()),
+    // Set once the match has actually started. Scores are only present for
+    // played matches, so `redScore !== undefined` is what marks a match done.
+    actualTime: v.optional(v.number()),
+    redScore: v.optional(v.number()),
+    blueScore: v.optional(v.number()),
   }).index("by_event_match", ["eventId", "matchNumber"]),
   pitReports: defineTable({
     eventId: v.id("events"),
@@ -65,6 +76,16 @@ export default defineSchema({
   })
     .index("by_team", ["teamId"])
     .index("by_team_scout", ["teamId", "scoutId"])
+    .index("by_event", ["eventId"]),
+  // Per-scout "watch this robot" flags. Personal like a picklist's ownerId list,
+  // not shared: two scouts watching the same team get a row each.
+  watchlist: defineTable({
+    eventId: v.id("events"),
+    teamId: v.id("teams"),
+    userId: v.id("users"),
+  })
+    .index("by_user_event", ["userId", "eventId"])
+    .index("by_team_user", ["teamId", "userId"])
     .index("by_event", ["eventId"]),
   picklists: defineTable({
     eventId: v.id("events"),
