@@ -1,10 +1,11 @@
 import { useQuery } from 'convex/react'
-import { useSyncExternalStore } from 'react'
 import type { FunctionReturnType } from 'convex/server'
 import { api } from '../../convex/_generated/api'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
+import { TeamComments } from '@/components/team-comments'
+import { useIsDesktop } from '@/lib/use-is-desktop'
 import { cn } from '@/lib/utils'
 
 type TeamWithStatus = FunctionReturnType<typeof api.teams.listWithStatus>[number]
@@ -43,18 +44,6 @@ export function PitStatusBadge({ count }: { count: number }) {
     >
       {count > 0 ? `${count} scout${count === 1 ? '' : 's'}` : 'Not Scouted'}
     </span>
-  )
-}
-
-// ponytail: matches the sm breakpoint used elsewhere; bump if the Tailwind config's screen changes.
-function useIsDesktop() {
-  return useSyncExternalStore(
-    (onChange) => {
-      const mql = window.matchMedia('(min-width: 640px)')
-      mql.addEventListener('change', onChange)
-      return () => mql.removeEventListener('change', onChange)
-    },
-    () => window.matchMedia('(min-width: 640px)').matches,
   )
 }
 
@@ -158,6 +147,12 @@ function TeamDetailBody({ team, isAdmin }: { team: TeamWithStatus; isAdmin: bool
             )}
           </section>
 
+          <Separator />
+
+          <section className="space-y-2">
+            <h3 className="text-sm font-medium">Comments</h3>
+            <TeamComments teamId={team._id} />
+          </section>
         </div>
       </div>
     </>

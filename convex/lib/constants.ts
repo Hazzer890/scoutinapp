@@ -8,6 +8,8 @@ export const tierValidator = v.union(...TIERS.map((tier) => v.literal(tier)));
 
 export const S_TIER_MAX = 2;
 
+export const MAX_COMMENT_LENGTH = 1000;
+
 export const PRESET_TAGS = [
   "Fast",
   "Good driver",
