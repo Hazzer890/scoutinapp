@@ -234,17 +234,19 @@ describe("pitReports.leaderboard", () => {
 });
 
 describe("pitReports.photosForEvent", () => {
-  test("returns photo reports sorted by team number, skipping photo-less reports", async () => {
+  test("groups photos by team, sorted by team number, skipping photo-less reports", async () => {
     const t = setupTest();
     const eventId = await createEvent(t);
     const team200 = await createTeam(t, eventId, 200);
     const team100 = await createTeam(t, eventId, 100);
     const scoutA = await createUser(t, "scout");
     const scoutB = await createUser(t, "scout");
+    await t.run((ctx) => ctx.db.patch(scoutB, { name: "Bob" }));
 
-    const [photoA, photoB] = await t.run(async (ctx) => [
+    const [photoA, photoB, photoC] = await t.run(async (ctx) => [
       await ctx.storage.store(new Blob(["a"])),
       await ctx.storage.store(new Blob(["b"])),
+      await ctx.storage.store(new Blob(["c"])),
     ]);
 
     await t.run(async (ctx) => {
@@ -258,13 +260,17 @@ describe("pitReports.photosForEvent", () => {
       };
       await ctx.db.insert("pitReports", { ...base, teamId: team200, scoutId: scoutA, photoId: photoA });
       await ctx.db.insert("pitReports", { ...base, teamId: team100, scoutId: scoutB, photoId: photoB });
-      await ctx.db.insert("pitReports", { ...base, teamId: team100, scoutId: scoutA }); // no photo
+      await ctx.db.insert("pitReports", { ...base, teamId: team100, scoutId: scoutA, photoId: photoC });
+      await ctx.db.insert("pitReports", { ...base, teamId: team200, scoutId: scoutB }); // no photo
     });
 
-    const photos = await t.withIdentity({ subject: scoutA }).query(api.pitReports.photosForEvent, {});
-    expect(photos.map((p) => p.teamNumber)).toEqual([100, 200]);
-    expect(photos[0].nickname).toBe("Team 100");
-    expect(photos[0].photoUrl).toContain("http");
+    const groups = await t.withIdentity({ subject: scoutA }).query(api.pitReports.photosForEvent, {});
+    expect(groups.map((g) => g.teamNumber)).toEqual([100, 200]);
+    expect(groups[0].nickname).toBe("Team 100");
+    // Team 100 was photographed twice, team 200 once (its second report has no photo).
+    expect(groups.map((g) => g.photos.length)).toEqual([2, 1]);
+    expect(groups[0].photos.map((p) => p.scoutName)).toEqual(["Bob", "Scout"]);
+    expect(groups[0].photos[0].photoUrl).toContain("http");
   });
 
   test("returns [] when there is no active event", async () => {
