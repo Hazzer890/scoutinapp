@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as events from "../events.js";
+import type * as exportData from "../exportData.js";
 import type * as http from "../http.js";
 import type * as lib_consensus from "../lib/consensus.js";
 import type * as lib_constants from "../lib/constants.js";
@@ -37,6 +38,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   events: typeof events;
+  exportData: typeof exportData;
   http: typeof http;
   "lib/consensus": typeof lib_consensus;
   "lib/constants": typeof lib_constants;
