@@ -26,6 +26,7 @@ import type * as tba from "../tba.js";
 import type * as tbaImport from "../tbaImport.js";
 import type * as teams from "../teams.js";
 import type * as users from "../users.js";
+import type * as watchlist from "../watchlist.js";
 
 import type {
   ApiFromModules,
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   tbaImport: typeof tbaImport;
   teams: typeof teams;
   users: typeof users;
+  watchlist: typeof watchlist;
 }>;
 
 /**

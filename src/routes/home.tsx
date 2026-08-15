@@ -5,6 +5,7 @@ import { CountUp } from '@/components/reactbits/count-up'
 import { Button } from '@/components/ui/button'
 
 const quickLinks = [
+  { to: '/next-match', label: 'Next Match' },
   { to: '/teams', label: 'Teams' },
   { to: '/scout', label: 'Scout Teams' },
   { to: '/picklist', label: 'Pick List' },

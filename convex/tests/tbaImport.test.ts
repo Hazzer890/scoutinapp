@@ -3,7 +3,13 @@ import { setupTest } from "./setup.helpers";
 import { api, internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { bootstrapRole } from "../auth";
-import { mapTbaTeam, mapTbaMatch, mapQualMatches } from "../lib/tbaMapping";
+import {
+  mapTbaTeam,
+  mapTbaMatch,
+  mapQualMatches,
+  isUpcoming,
+  compareByPlayOrder,
+} from "../lib/tbaMapping";
 
 type Test = ReturnType<typeof setupTest>;
 
@@ -58,6 +64,57 @@ describe("TBA response mapping", () => {
       alliances: { red: { team_keys: ["frc100"] }, blue: { team_keys: ["frc200"] } },
     });
     expect(row.scheduledTime).toBeUndefined();
+  });
+
+  test("mapTbaMatch carries predicted/actual times and only real scores", () => {
+    const base = {
+      key: "2026test_qm1",
+      comp_level: "qm",
+      match_number: 1,
+      alliances: { red: { team_keys: ["frc100"] }, blue: { team_keys: ["frc200"] } },
+    };
+
+    const unplayed = mapTbaMatch({
+      ...base,
+      time: 1700000000,
+      predicted_time: 1700000600,
+      alliances: {
+        red: { team_keys: ["frc100"], score: -1 },
+        blue: { team_keys: ["frc200"], score: -1 },
+      },
+    });
+    expect(unplayed.predictedTime).toBe(1700000600000);
+    expect(unplayed.actualTime).toBeUndefined();
+    expect(unplayed.redScore).toBeUndefined();
+    expect(isUpcoming(unplayed)).toBe(true);
+
+    const played = mapTbaMatch({
+      ...base,
+      time: 1700000000,
+      actual_time: 1700000900,
+      alliances: {
+        red: { team_keys: ["frc100"], score: 88 },
+        blue: { team_keys: ["frc200"], score: 71 },
+      },
+    });
+    expect(played.actualTime).toBe(1700000900000);
+    expect(played.redScore).toBe(88);
+    expect(played.blueScore).toBe(71);
+    expect(isUpcoming(played)).toBe(false);
+  });
+
+  test("compareByPlayOrder prefers actual, then predicted, then scheduled time", () => {
+    const sorted = [
+      { matchNumber: 1, scheduledTime: 3000, predictedTime: 9000 },
+      { matchNumber: 2, scheduledTime: 4000 },
+      { matchNumber: 3, scheduledTime: 5000, actualTime: 1000, predictedTime: 8000 },
+    ].sort(compareByPlayOrder);
+    expect(sorted.map((m) => m.matchNumber)).toEqual([3, 2, 1]);
+
+    // No times anywhere: fall back to match number.
+    expect([{ matchNumber: 9 }, { matchNumber: 4 }].sort(compareByPlayOrder).map((m) => m.matchNumber)).toEqual(
+      [4, 9],
+    );
   });
 
   test("mapQualMatches drops non-qualification matches", () => {
@@ -184,6 +241,135 @@ describe("tbaImport.applyImport", () => {
     expect(allTeams[0]._id).toBe(manualTeamId);
     expect(allTeams[0].tbaKey).toBe("frc100");
     expect(allTeams[0].nickname).toBe("Team 100");
+  });
+});
+
+describe("tba.refreshMatches", () => {
+  function stubMatchesFetch(matches: unknown[]) {
+    vi.stubEnv("TBA_API_KEY", "test-key");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(matches))));
+  }
+
+  test("a scout can refresh the active event's schedule", async () => {
+    stubMatchesFetch([
+      {
+        key: "2026test_qm1",
+        comp_level: "qm",
+        match_number: 1,
+        alliances: {
+          red: { team_keys: ["frc100"], score: 60 },
+          blue: { team_keys: ["frc200"], score: 55 },
+        },
+        time: 1700000000,
+        actual_time: 1700000100,
+      },
+      {
+        key: "2026test_qm2",
+        comp_level: "qm",
+        match_number: 2,
+        alliances: {
+          red: { team_keys: ["frc100"], score: -1 },
+          blue: { team_keys: ["frc200"], score: -1 },
+        },
+        time: 1700000600,
+        predicted_time: 1700000900,
+      },
+      {
+        key: "2026test_f1m1",
+        comp_level: "f",
+        match_number: 1,
+        alliances: { red: { team_keys: ["frc100"] }, blue: { team_keys: ["frc200"] } },
+      },
+    ]);
+
+    const t = setupTest();
+    const scoutId = await createUser(t, "scout");
+    const eventId: Id<"events"> = await t.run((ctx) =>
+      ctx.db.insert("events", { tbaKey: "2026test", name: "Test Event", isActive: true }),
+    );
+
+    const result = await t.withIdentity({ subject: scoutId }).action(api.tba.refreshMatches, {});
+    expect(result).toEqual({ ok: true, upcoming: 1, total: 2 }); // the final was filtered out
+
+    const matches = await t.run((ctx) =>
+      ctx.db
+        .query("matches")
+        .withIndex("by_event_match", (q) => q.eq("eventId", eventId))
+        .collect(),
+    );
+    expect(matches).toHaveLength(2);
+    const qm2 = matches.find((m) => m.matchNumber === 2)!;
+    expect(qm2.predictedTime).toBe(1700000900000);
+    expect(qm2.redScore).toBeUndefined();
+
+    const event = await t.run((ctx) => ctx.db.get(eventId));
+    expect(event?.matchesSyncedAt).toBeTypeOf("number");
+
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  test("clears a stale predicted time that TBA no longer reports", async () => {
+    stubMatchesFetch([
+      {
+        key: "2026test_qm1",
+        comp_level: "qm",
+        match_number: 1,
+        alliances: {
+          red: { team_keys: ["frc100"], score: -1 },
+          blue: { team_keys: ["frc200"], score: -1 },
+        },
+        time: 1700000000,
+      },
+    ]);
+
+    const t = setupTest();
+    const scoutId = await createUser(t, "scout");
+    const eventId: Id<"events"> = await t.run((ctx) =>
+      ctx.db.insert("events", { tbaKey: "2026test", name: "Test Event", isActive: true }),
+    );
+    await t.run((ctx) =>
+      ctx.db.insert("matches", {
+        eventId,
+        tbaKey: "2026test_qm1",
+        matchNumber: 1,
+        redTeams: [100],
+        blueTeams: [200],
+        predictedTime: 1699999999000,
+      }),
+    );
+
+    await t.withIdentity({ subject: scoutId }).action(api.tba.refreshMatches, {});
+
+    const matches = await t.run((ctx) =>
+      ctx.db
+        .query("matches")
+        .withIndex("by_event_match", (q) => q.eq("eventId", eventId))
+        .collect(),
+    );
+    expect(matches).toHaveLength(1);
+    expect(matches[0].predictedTime).toBeUndefined();
+
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  test("rejects anonymous callers and reports a missing active event", async () => {
+    vi.stubEnv("TBA_API_KEY", "test-key");
+    const t = setupTest();
+
+    expect(await t.action(api.tba.refreshMatches, {})).toEqual({
+      ok: false,
+      error: "Not signed in",
+    });
+
+    const scoutId = await createUser(t, "scout");
+    expect(await t.withIdentity({ subject: scoutId }).action(api.tba.refreshMatches, {})).toEqual({
+      ok: false,
+      error: "No active event",
+    });
+
+    vi.unstubAllEnvs();
   });
 });
 

@@ -5,6 +5,7 @@ import { api } from '../../convex/_generated/api'
 import { FilterChips } from '@/components/filter-chips'
 import { Input } from '@/components/ui/input'
 import { PitStatusBadge, TierBadge, TeamDetail } from '@/components/team-detail'
+import { WatchButton } from '@/components/watch-button'
 import type { FunctionReturnType } from 'convex/server'
 
 type TeamWithStatus = FunctionReturnType<typeof api.teams.listWithStatus>[number]
@@ -14,7 +15,7 @@ function TeamsList() {
   const me = useQuery(api.users.me)
   const [searchParams, setSearchParams] = useSearchParams()
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<'all' | 'scouted' | 'unscouted'>('all')
+  const [filter, setFilter] = useState<'all' | 'scouted' | 'unscouted' | 'watching'>('all')
 
   const isAdmin = me?.role === 'admin'
   const teamsLoading = teams === undefined
@@ -40,6 +41,7 @@ function TeamsList() {
       ? teams.filter((t) => t.number.toString().includes(q) || t.nickname.toLowerCase().includes(q))
       : teams
     if (filter === 'all') return bySearch
+    if (filter === 'watching') return bySearch.filter((t) => t.watchedByMe)
     return bySearch.filter((t) => (filter === 'scouted' ? t.scoutCount > 0 : t.scoutCount === 0))
   }, [teams, search, filter])
 
@@ -68,6 +70,7 @@ function TeamsList() {
           { value: 'all', label: 'All' },
           { value: 'scouted', label: 'Scouted' },
           { value: 'unscouted', label: 'Unscouted' },
+          { value: 'watching', label: 'Watching' },
         ]}
         value={filter}
         onChange={setFilter}
@@ -80,10 +83,13 @@ function TeamsList() {
       ) : (
         <ul className="space-y-2">
           {filtered.map((team) => (
-            <li key={team._id}>
+            <li
+              key={team._id}
+              className="flex items-center gap-1 rounded-lg border bg-card pr-2 text-card-foreground transition-colors hover:bg-muted"
+            >
               <Link
                 to={`/teams?team=${team._id}`}
-                className="flex flex-col gap-2 rounded-lg border bg-card p-3 text-card-foreground transition-colors hover:bg-muted sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                className="flex min-w-0 flex-1 flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
               >
                 <div className="flex items-center gap-3">
                   <span className="w-10 shrink-0 text-lg font-semibold tabular-nums">{team.number}</span>
@@ -97,6 +103,11 @@ function TeamsList() {
                   )}
                 </div>
               </Link>
+              <WatchButton
+                teamId={team._id}
+                watched={team.watchedByMe}
+                label={`team ${team.number}`}
+              />
             </li>
           ))}
         </ul>

@@ -12,7 +12,7 @@ const teamStatsValidator = v.object({
   pctOfBenchmark: v.union(v.number(), v.null()),
 });
 
-async function statsForEvent(ctx: QueryCtx, eventId: Id<"events">) {
+export async function statsForEvent(ctx: QueryCtx, eventId: Id<"events">) {
   const reports = await ctx.db
     .query("pitReports")
     .withIndex("by_event", (q) => q.eq("eventId", eventId))
