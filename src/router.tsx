@@ -4,6 +4,7 @@ import { RootLayout } from '@/routes/root'
 import { HomePage } from '@/routes/home'
 import { SignInPage } from '@/routes/sign-in'
 import { TeamsPage } from '@/routes/teams'
+import { NextMatchPage } from '@/routes/next-match'
 import { ScoutPage } from '@/routes/scout'
 import { ScoutFormPage } from '@/routes/scout-form'
 import { PicklistPage } from '@/routes/picklist'
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { index: true, Component: HomePage },
       { path: 'sign-in', Component: SignInPage },
       { path: 'teams', Component: TeamsPage },
+      { path: 'next-match', Component: NextMatchPage },
       { path: 'scout', Component: ScoutPage },
       { path: 'scout/:teamId', Component: ScoutFormPage },
       { path: 'picklist', Component: PicklistPage },

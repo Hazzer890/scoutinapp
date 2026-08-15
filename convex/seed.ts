@@ -11,6 +11,7 @@ const WIPE_TABLES = [
   "teamComments",
   "pitReports",
   "picklists",
+  "watchlist",
   "matches",
   "teams",
   "events",
@@ -58,14 +59,19 @@ export const dev = internalMutation({
     }
 
     // 6 quals, 3v3, each team's index offset by 4 so red/blue never collide within a match.
+    // Q1 is already played (scored) so the Next Match view has something to skip past.
     const matchCount = 6;
     for (let i = 0; i < matchCount; i++) {
+      const played = i === 0;
       await ctx.db.insert("matches", {
         eventId,
         matchNumber: i + 1,
         redTeams: [TEAM_NUMBERS[i % 12], TEAM_NUMBERS[(i + 4) % 12], TEAM_NUMBERS[(i + 8) % 12]],
         blueTeams: [TEAM_NUMBERS[(i + 1) % 12], TEAM_NUMBERS[(i + 5) % 12], TEAM_NUMBERS[(i + 9) % 12]],
-        scheduledTime: Date.now() + i * 10 * 60 * 1000,
+        scheduledTime: Date.now() + (i - 1) * 10 * 60 * 1000,
+        ...(played
+          ? { actualTime: Date.now() - 8 * 60 * 1000, redScore: 74, blueScore: 61 }
+          : {}),
       });
     }
 

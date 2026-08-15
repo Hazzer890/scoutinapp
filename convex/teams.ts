@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { getActiveEvent } from "./events";
 import { tierValidator } from "./lib/constants";
 import { requireAdmin, requireUser } from "./model/authz";
+import { watchedTeamIds } from "./watchlist";
 import { mutation, query } from "./_generated/server";
 
 export const teamValidator = v.object({
@@ -35,6 +36,7 @@ export const listWithStatus = query({
   returns: v.array(
     teamValidator.extend({
       scoutedByMe: v.boolean(),
+      watchedByMe: v.boolean(),
       scoutCount: v.number(),
       commentCount: v.number(),
       personalTier: v.union(tierValidator, v.null()),
@@ -90,9 +92,12 @@ export const listWithStatus = query({
       (primaryList?.entries ?? []).map((e) => [e.teamId, e.tier]),
     );
 
+    const watchedIds = await watchedTeamIds(ctx, user._id, event._id);
+
     return teams.map((team) => ({
       ...team,
       scoutedByMe: myScoutedTeamIds.has(team._id),
+      watchedByMe: watchedIds.has(team._id),
       scoutCount: scoutCountByTeam.get(team._id) ?? 0,
       commentCount: commentCountByTeam.get(team._id) ?? 0,
       personalTier: personalTierByTeam.get(team._id) ?? null,
@@ -149,6 +154,12 @@ export const remove = mutation({
       .withIndex("by_team", (q) => q.eq("teamId", teamId))
       .collect();
     for (const comment of comments) await ctx.db.delete(comment._id);
+
+    const watches = await ctx.db
+      .query("watchlist")
+      .withIndex("by_team_user", (q) => q.eq("teamId", teamId))
+      .collect();
+    for (const watch of watches) await ctx.db.delete(watch._id);
 
     const team = await ctx.db.get(teamId);
     if (team) {

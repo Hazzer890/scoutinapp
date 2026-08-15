@@ -182,7 +182,7 @@ export const photosForEvent = query({
       teamId: v.id("teams"),
       teamNumber: v.number(),
       nickname: v.string(),
-      photoUrl: v.string(),
+      photos: v.array(v.object({ photoUrl: v.string(), scoutName: v.string() })),
     }),
   ),
   handler: async (ctx) => {
@@ -194,17 +194,34 @@ export const photosForEvent = query({
       .withIndex("by_event", (q) => q.eq("eventId", event._id))
       .collect();
 
-    const photos: { teamId: Id<"teams">; teamNumber: number; nickname: string; photoUrl: string }[] = [];
+    type Group = {
+      teamId: Id<"teams">;
+      teamNumber: number;
+      nickname: string;
+      photos: { photoUrl: string; scoutName: string }[];
+    };
+    const byTeam = new Map<Id<"teams">, Group>();
+    const scoutNames = new Map<Id<"users">, string>();
     for (const report of reports) {
       if (!report.photoId) continue;
-      const team = await ctx.db.get(report.teamId);
-      if (!team) continue;
       const photoUrl = await ctx.storage.getUrl(report.photoId);
       if (!photoUrl) continue;
-      photos.push({ teamId: report.teamId, teamNumber: team.number, nickname: team.nickname, photoUrl });
+      let group = byTeam.get(report.teamId);
+      if (!group) {
+        const team = await ctx.db.get(report.teamId);
+        if (!team) continue;
+        group = { teamId: report.teamId, teamNumber: team.number, nickname: team.nickname, photos: [] };
+        byTeam.set(report.teamId, group);
+      }
+      let scoutName = scoutNames.get(report.scoutId);
+      if (scoutName === undefined) {
+        const scout = await ctx.db.get(report.scoutId);
+        scoutName = scout?.name ?? "Scout";
+        scoutNames.set(report.scoutId, scoutName);
+      }
+      group.photos.push({ photoUrl, scoutName });
     }
-    photos.sort((a, b) => a.teamNumber - b.teamNumber);
-    return photos;
+    return [...byTeam.values()].sort((a, b) => a.teamNumber - b.teamNumber);
   },
 });
 
