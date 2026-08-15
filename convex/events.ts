@@ -10,6 +10,7 @@ export const eventValidator = v.object({
   tbaKey: v.string(),
   name: v.string(),
   isActive: v.boolean(),
+  matchesSyncedAt: v.optional(v.number()),
 });
 
 export async function getActiveEvent(ctx: QueryCtx | MutationCtx) {
