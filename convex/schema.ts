@@ -77,6 +77,15 @@ export default defineSchema({
     .index("by_team", ["teamId"])
     .index("by_team_scout", ["teamId", "scoutId"])
     .index("by_event", ["eventId"]),
+  // Quick notes a scout can leave on a team without filling out a pit report.
+  teamComments: defineTable({
+    eventId: v.id("events"),
+    teamId: v.id("teams"),
+    authorId: v.id("users"),
+    text: v.string(),
+  })
+    .index("by_team", ["teamId"])
+    .index("by_event", ["eventId"]),
   // Per-scout "watch this robot" flags. Personal like a picklist's ownerId list,
   // not shared: two scouts watching the same team get a row each.
   watchlist: defineTable({

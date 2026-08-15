@@ -38,6 +38,7 @@ export const listWithStatus = query({
       scoutedByMe: v.boolean(),
       watchedByMe: v.boolean(),
       scoutCount: v.number(),
+      commentCount: v.number(),
       personalTier: v.union(tierValidator, v.null()),
       primaryTier: v.union(tierValidator, v.null()),
     }),
@@ -61,6 +62,15 @@ export const listWithStatus = query({
     for (const report of pitReports) {
       scoutCountByTeam.set(report.teamId, (scoutCountByTeam.get(report.teamId) ?? 0) + 1);
       if (report.scoutId === user._id) myScoutedTeamIds.add(report.teamId);
+    }
+
+    const comments = await ctx.db
+      .query("teamComments")
+      .withIndex("by_event", (q) => q.eq("eventId", event._id))
+      .collect();
+    const commentCountByTeam = new Map<string, number>();
+    for (const comment of comments) {
+      commentCountByTeam.set(comment.teamId, (commentCountByTeam.get(comment.teamId) ?? 0) + 1);
     }
 
     const personalList = await ctx.db
@@ -89,6 +99,7 @@ export const listWithStatus = query({
       scoutedByMe: myScoutedTeamIds.has(team._id),
       watchedByMe: watchedIds.has(team._id),
       scoutCount: scoutCountByTeam.get(team._id) ?? 0,
+      commentCount: commentCountByTeam.get(team._id) ?? 0,
       personalTier: personalTierByTeam.get(team._id) ?? null,
       primaryTier: primaryTierByTeam.get(team._id) ?? null,
     }));
@@ -137,6 +148,12 @@ export const remove = mutation({
       .withIndex("by_team", (q) => q.eq("teamId", teamId))
       .collect();
     for (const report of pitReports) await ctx.db.delete(report._id);
+
+    const comments = await ctx.db
+      .query("teamComments")
+      .withIndex("by_team", (q) => q.eq("teamId", teamId))
+      .collect();
+    for (const comment of comments) await ctx.db.delete(comment._id);
 
     const watches = await ctx.db
       .query("watchlist")

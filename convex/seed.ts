@@ -7,7 +7,15 @@ const TEAM_NUMBERS = [4788, 254, 1114, 2056, 1678, 3476, 118, 5460, 6800, 195, 2
 
 // Tables this seed owns. Deliberately excludes users/authTables — signed-in
 // accounts (including whoever runs the e2e suite) must survive a reseed.
-const WIPE_TABLES = ["pitReports", "picklists", "watchlist", "matches", "teams", "events"] as const;
+const WIPE_TABLES = [
+  "teamComments",
+  "pitReports",
+  "picklists",
+  "watchlist",
+  "matches",
+  "teams",
+  "events",
+] as const;
 
 export const dev = internalMutation({
   args: {},

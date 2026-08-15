@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as comments from "../comments.js";
 import type * as events from "../events.js";
 import type * as exportData from "../exportData.js";
 import type * as http from "../http.js";
@@ -37,6 +38,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  comments: typeof comments;
   events: typeof events;
   exportData: typeof exportData;
   http: typeof http;
