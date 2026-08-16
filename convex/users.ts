@@ -81,6 +81,63 @@ export const setName = mutation({
   },
 });
 
+// Deletes the account and bans the email so they can't sign up again.
+// Pit reports and comments are kept — they're scouting data, and readers
+// already fall back to "Scout" when the author is gone.
+export const remove = mutation({
+  args: { userId: v.id("users") },
+  returns: v.null(),
+  handler: async (ctx, { userId }) => {
+    const admin = await requireAdmin(ctx);
+    if (admin._id === userId) throw new ConvexError("You cannot delete yourself");
+    const target = await ctx.db.get(userId);
+    if (!target) throw new ConvexError("User not found");
+
+    const email = target.email;
+    if (email) {
+      const alreadyBanned = await ctx.db
+        .query("bannedEmails")
+        .withIndex("by_email", (q) => q.eq("email", email))
+        .first();
+      if (!alreadyBanned) await ctx.db.insert("bannedEmails", { email });
+    }
+
+    // Auth records: accounts block the credential, sessions/tokens sign them out now.
+    const accounts = await ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
+      .collect();
+    for (const account of accounts) await ctx.db.delete(account._id);
+    const sessions = await ctx.db
+      .query("authSessions")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .collect();
+    for (const session of sessions) {
+      const tokens = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+        .collect();
+      for (const token of tokens) await ctx.db.delete(token._id);
+      await ctx.db.delete(session._id);
+    }
+
+    // Personal rows that would otherwise skew watch counts and picklist merges.
+    const watches = await ctx.db
+      .query("watchlist")
+      .withIndex("by_user_event", (q) => q.eq("userId", userId))
+      .collect();
+    for (const watch of watches) await ctx.db.delete(watch._id);
+    // ponytail: full scan — no by-owner index and the table is tiny.
+    const picklists = await ctx.db.query("picklists").collect();
+    for (const list of picklists) {
+      if (list.ownerId === userId) await ctx.db.delete(list._id);
+    }
+
+    await ctx.db.delete(userId);
+    return null;
+  },
+});
+
 export const setRole = mutation({
   args: { userId: v.id("users"), role: roleValidator },
   returns: v.null(),

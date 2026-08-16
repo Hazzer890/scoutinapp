@@ -96,6 +96,10 @@ export default defineSchema({
     .index("by_user_event", ["userId", "eventId"])
     .index("by_team_user", ["teamId", "userId"])
     .index("by_event", ["eventId"]),
+  // Emails blocked from signing up again after their account was deleted.
+  bannedEmails: defineTable({
+    email: v.string(),
+  }).index("by_email", ["email"]),
   picklists: defineTable({
     eventId: v.id("events"),
     ownerId: v.optional(v.id("users")), // absent = primary (admin-only) list
