@@ -32,6 +32,9 @@ const allianceTeamValidator = v.object({
   scoutCount: v.number(),
   ballsPerMatch: v.union(v.number(), v.null()),
   tier: v.union(tierValidator, v.null()),
+  // Fraction of pit reports answering yes; null when the team has no reports.
+  climbRate: v.union(v.number(), v.null()),
+  autoRate: v.union(v.number(), v.null()),
 });
 
 const upcomingMatchValidator = v.object({
@@ -93,9 +96,13 @@ export const upcoming = query({
       .query("pitReports")
       .withIndex("by_event", (q) => q.eq("eventId", event._id))
       .collect();
-    const scoutCountByTeam = new Map<string, number>();
+    const pitAggByTeam = new Map<string, { count: number; climbYes: number; autoYes: number }>();
     for (const report of pitReports) {
-      scoutCountByTeam.set(report.teamId, (scoutCountByTeam.get(report.teamId) ?? 0) + 1);
+      const agg = pitAggByTeam.get(report.teamId) ?? { count: 0, climbYes: 0, autoYes: 0 };
+      agg.count += 1;
+      if (report.canClimb) agg.climbYes += 1;
+      if (report.hasAuto) agg.autoYes += 1;
+      pitAggByTeam.set(report.teamId, agg);
     }
 
     const personalList = await ctx.db
@@ -115,16 +122,21 @@ export const upcoming = query({
           scoutCount: 0,
           ballsPerMatch: null,
           tier: null,
+          climbRate: null,
+          autoRate: null,
         };
       }
+      const agg = pitAggByTeam.get(team._id);
       return {
         number,
         teamId: team._id,
         nickname: team.nickname,
         watched: watchedIds.has(team._id),
-        scoutCount: scoutCountByTeam.get(team._id) ?? 0,
+        scoutCount: agg?.count ?? 0,
         ballsPerMatch: stats[team._id]?.ballsPerMatch ?? null,
         tier: tierByTeam.get(team._id) ?? null,
+        climbRate: agg ? agg.climbYes / agg.count : null,
+        autoRate: agg ? agg.autoYes / agg.count : null,
       };
     };
 

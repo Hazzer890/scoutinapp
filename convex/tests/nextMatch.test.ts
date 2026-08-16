@@ -117,6 +117,19 @@ describe("matches.upcoming", () => {
         tags: [],
       }),
     );
+    await t.run((ctx) =>
+      ctx.db.insert("pitReports", {
+        eventId,
+        teamId: team100,
+        scoutId,
+        canScoreBalls: true,
+        canClimb: true,
+        hasAuto: true,
+        driverRating: 4,
+        defenseRating: 3,
+        tags: [],
+      }),
+    );
 
     const { matches } = await asScout.query(api.matches.upcoming, {});
     const red = matches[0].red[0];
@@ -125,14 +138,16 @@ describe("matches.upcoming", () => {
       teamId: team100,
       nickname: "Team 100",
       watched: true,
-      scoutCount: 1,
+      scoutCount: 2,
       ballsPerMatch: 12,
+      climbRate: 0.5,
+      autoRate: 0.5,
     });
     expect(matches[0].watchedCount).toBe(1);
 
     // 999 isn't on the roster (surrogate / stale import) but still shows up.
     const offRoster = matches[0].blue[1];
-    expect(offRoster).toMatchObject({ number: 999, teamId: null, nickname: null, watched: false });
+    expect(offRoster).toMatchObject({ number: 999, teamId: null, nickname: null, climbRate: null });
   });
 
   test("limit caps the returned matches without hiding the true count", async () => {

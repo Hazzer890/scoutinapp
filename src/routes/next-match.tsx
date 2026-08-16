@@ -1,5 +1,5 @@
 import { Authenticated, AuthLoading, Unauthenticated, useAction, useQuery } from 'convex/react'
-import { RefreshCwIcon } from 'lucide-react'
+import { ChevronDownIcon, RefreshCwIcon } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import type { FunctionReturnType } from 'convex/server'
@@ -130,7 +130,77 @@ function NextMatchCard({ match, now }: { match: UpcomingMatch; now: number }) {
   )
 }
 
+// Sum of known ballsPerMatch plus how many teams have no data behind the number.
+function allianceBalls(teams: AllianceTeam[]) {
+  const known = teams.filter((t) => t.ballsPerMatch !== null)
+  return {
+    total: known.reduce((sum, t) => sum + (t.ballsPerMatch ?? 0), 0),
+    unknown: teams.length - known.length,
+  }
+}
+
+function AnalyticsTeamRow({ team }: { team: AllianceTeam }) {
+  const stats = [
+    team.ballsPerMatch !== null && `${team.ballsPerMatch} balls`,
+    team.climbRate !== null && `${Math.round(team.climbRate * 100)}% climb`,
+    team.autoRate !== null && `${Math.round(team.autoRate * 100)}% auto`,
+  ].filter(Boolean)
+
+  return (
+    <li className="flex items-center gap-2 text-xs">
+      {team.teamId ? (
+        <Link to={`/teams?team=${team.teamId}`} className="w-12 shrink-0 font-semibold tabular-nums hover:underline">
+          {team.number}
+        </Link>
+      ) : (
+        <span className="w-12 shrink-0 font-semibold tabular-nums">{team.number}</span>
+      )}
+      <span className="text-muted-foreground">
+        {stats.length > 0 ? stats.join(' · ') : 'Not scouted'}
+      </span>
+      <span className="ml-auto">
+        <TierBadge tier={team.tier} />
+      </span>
+    </li>
+  )
+}
+
+function MatchAnalytics({ match }: { match: UpcomingMatch }) {
+  const red = allianceBalls(match.red)
+  const blue = allianceBalls(match.blue)
+  const unknownNote = (a: { unknown: number }) => (a.unknown > 0 ? `+${a.unknown} unscouted` : null)
+
+  return (
+    <div className="grid gap-3 border-t pt-3 sm:grid-cols-2">
+      {(
+        [
+          ['red', match.red, red],
+          ['blue', match.blue, blue],
+        ] as const
+      ).map(([alliance, teams, balls]) => (
+        <div key={alliance} className="space-y-1.5">
+          <p
+            className={cn(
+              'text-xs font-medium uppercase tracking-wide',
+              alliance === 'red' ? 'text-red-600 dark:text-red-400' : 'text-blue-600 dark:text-blue-400',
+            )}
+          >
+            {alliance} · ≈{Math.round(balls.total)} balls
+            {unknownNote(balls) && <span className="text-muted-foreground normal-case"> ({unknownNote(balls)})</span>}
+          </p>
+          <ul className="space-y-1">
+            {teams.map((team) => (
+              <AnalyticsTeamRow key={team.number} team={team} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function UpcomingRow({ match, now }: { match: UpcomingMatch; now: number }) {
+  const [open, setOpen] = useState(false)
   const numbers = (teams: AllianceTeam[]) =>
     teams.map((team) => (
       <span key={team.number} className={cn('tabular-nums', team.watched && 'font-semibold text-amber-500')}>
@@ -139,14 +209,30 @@ function UpcomingRow({ match, now }: { match: UpcomingMatch; now: number }) {
     ))
 
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border bg-card p-3 text-sm text-card-foreground">
-      <span className="w-12 shrink-0 font-semibold tabular-nums">Q{match.matchNumber}</span>
-      <span className="flex gap-2 text-red-600 dark:text-red-400">{numbers(match.red)}</span>
-      <span className="text-muted-foreground">vs</span>
-      <span className="flex gap-2 text-blue-600 dark:text-blue-400">{numbers(match.blue)}</span>
-      <span className="ml-auto text-xs">
-        <MatchTime match={match} now={now} />
-      </span>
+    <li className="rounded-lg border bg-card text-sm text-card-foreground">
+      <button
+        type="button"
+        className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 p-3 text-left"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <span className="w-12 shrink-0 font-semibold tabular-nums">Q{match.matchNumber}</span>
+        <span className="flex gap-2 text-red-600 dark:text-red-400">{numbers(match.red)}</span>
+        <span className="text-muted-foreground">vs</span>
+        <span className="flex gap-2 text-blue-600 dark:text-blue-400">{numbers(match.blue)}</span>
+        <span className="ml-auto flex items-center gap-2 text-xs">
+          <MatchTime match={match} now={now} />
+          <ChevronDownIcon
+            className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')}
+            aria-hidden
+          />
+        </span>
+      </button>
+      {open && (
+        <div className="px-3 pb-3">
+          <MatchAnalytics match={match} />
+        </div>
+      )}
     </li>
   )
 }
